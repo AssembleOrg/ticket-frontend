@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Ticket,
@@ -15,18 +16,13 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTickets, useClients } from "@/lib/hooks";
-import { statusLabels, priorityLabels, formatDate } from "@/lib/format";
+import { useDashboardStats } from "@/lib/hooks";
+import { statusLabels, priorityLabels } from "@/lib/format";
 import { TicketForm } from "@/components/forms/ticket-form";
-import { useState } from "react";
 
 export default function DashboardPage() {
   const [showTicketForm, setShowTicketForm] = useState(false);
-  const { data: tickets, isLoading: loadingTickets, pagination: ticketsPag, mutate: mutateTickets } = useTickets({ page: 1, limit: 4 });
-  const { data: clients, isLoading: loadingClients, pagination: clientsPag } = useClients({ page: 1, limit: 100 });
-
-  const totalTickets = ticketsPag?.total ?? 0;
-  const totalClients = clientsPag?.total ?? 0;
+  const { stats, isLoading, mutate } = useDashboardStats();
 
   return (
     <div className="flex flex-col gap-8">
@@ -44,26 +40,31 @@ export default function DashboardPage() {
       <TicketForm
         open={showTicketForm}
         onClose={() => setShowTicketForm(false)}
-        onSuccess={() => mutateTickets()}
+        onSuccess={() => mutate()}
       />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Tickets abiertos", value: totalTickets, icon: Ticket },
-          { label: "Clientes activos", value: totalClients, icon: Users },
-          { label: "Horas consumidas", value: "—", icon: Clock },
-          { label: "Tickets resueltos", value: "—", icon: CheckCircle },
+          { label: "Tickets abiertos", value: stats?.openTickets ?? 0, icon: Ticket },
+          { label: "Clientes activos", value: stats?.totalClients ?? 0, icon: Users },
+          { label: "Horas consumidas", value: `${stats?.consumedHoursThisMonth ?? 0}h`, icon: Clock, subtitle: "este mes" },
+          { label: "Tickets cerrados", value: stats?.closedTickets ?? 0, icon: CheckCircle },
         ].map((s) => (
           <Card key={s.label} className="p-5">
             <div className="flex items-start justify-between">
               <p className="text-sm text-white/40">{s.label}</p>
               <s.icon className="h-5 w-5 text-white/20" />
             </div>
-            {loadingTickets || loadingClients ? (
+            {isLoading ? (
               <Skeleton className="mt-2 h-9 w-20" />
             ) : (
-              <p className="mt-2 text-3xl font-bold text-white">{s.value}</p>
+              <>
+                <p className="mt-2 text-3xl font-bold text-white">{s.value}</p>
+                {"subtitle" in s && (
+                  <p className="mt-0.5 text-xs text-white/30">{s.subtitle}</p>
+                )}
+              </>
             )}
           </Card>
         ))}
@@ -84,7 +85,7 @@ export default function DashboardPage() {
               </Link>
             }
           />
-          {loadingTickets ? (
+          {isLoading ? (
             <div className="flex flex-col gap-4 p-5">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
@@ -102,7 +103,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tickets?.map((t) => (
+                  {stats?.recentTickets?.map((t) => (
                     <tr
                       key={t.id}
                       className="border-t border-white/4 transition-colors hover:bg-white/2"
@@ -126,32 +127,65 @@ export default function DashboardPage() {
                       </td>
                     </tr>
                   ))}
-                  {tickets?.length === 0 ? (
+                  {stats?.recentTickets?.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-sm text-white/30">
                         No hay tickets aún
                       </td>
                     </tr>
-                  ) : null}
+                  )}
                 </tbody>
               </table>
             </div>
           )}
         </Card>
 
-        {/* Hour packs placeholder - requires aggregation not available in a single endpoint */}
+        {/* Hour packs per client */}
         <Card>
-          <CardHeader title="Packs de horas" />
-          <div className="px-5 pb-5">
-            <p className="text-sm text-white/30">
-              Los packs de horas se muestran en el detalle de cada cliente.
-            </p>
-            <Link
-              href="/clientes"
-              className="mt-3 flex items-center gap-1 text-sm text-white/40 transition-colors hover:text-white/70"
-            >
-              Ver clientes <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
+          <CardHeader
+            title="Packs de horas"
+            action={
+              <Link
+                href="/clientes"
+                className="flex items-center gap-1 text-sm text-white/40 transition-colors hover:text-white/70"
+              >
+                Ver clientes <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            }
+          />
+          <div className="flex flex-col gap-3 px-5 pb-5">
+            {isLoading ? (
+              <>
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </>
+            ) : stats?.hourPacks && stats.hourPacks.length > 0 ? (
+              stats.hourPacks.map((hp) => (
+                <Link
+                  key={hp.clientId}
+                  href={`/clientes/${hp.clientId}`}
+                  className="rounded-lg border border-white/6 bg-white/2 p-4 transition-colors hover:border-white/15"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-white">{hp.clientName}</span>
+                    <span className="text-xs font-bold text-neon">{hp.percentage}%</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-white/30">
+                    <span>
+                      {Math.round(hp.consumedMinutes / 60)}h / {Math.round(hp.totalAvailableMinutes / 60)}h
+                    </span>
+                    <span>{hp.weeklyHours}h/sem</span>
+                  </div>
+                  <ProgressBar
+                    value={hp.consumedMinutes}
+                    max={hp.totalAvailableMinutes}
+                    className="mt-2"
+                  />
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm text-white/30">Sin packs de horas activos</p>
+            )}
           </div>
         </Card>
       </div>

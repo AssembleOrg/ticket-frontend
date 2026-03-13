@@ -16,6 +16,26 @@ import type {
 } from "./types";
 import { buildQuery } from "./api";
 
+// ── Dashboard ───────────────────────────────────────
+
+export interface DashboardStats {
+  openTickets: number;
+  closedTickets: number;
+  totalClients: number;
+  consumedHoursThisMonth: number;
+  recentTickets: Ticket[];
+  hourPacks: {
+    clientId: string;
+    clientName: string;
+    weeklyHours: number;
+    monthlyHours: number;
+    consumedMinutes: number;
+    totalAvailableMinutes: number;
+    remainingMinutes: number;
+    percentage: number;
+  }[];
+}
+
 // ── Generic fetcher ──────────────────────────────────
 
 async function fetcher<T>(path: string): Promise<ApiResponse<T>> {
@@ -47,6 +67,14 @@ function usePaginated<T>(
     error,
     mutate,
   };
+}
+
+export function useDashboardStats() {
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse<DashboardStats>>(
+    "/dashboard/stats",
+    fetcher<DashboardStats>,
+  );
+  return { stats: data?.data, isLoading, error, mutate };
 }
 
 // ── Clients ──────────────────────────────────────────
