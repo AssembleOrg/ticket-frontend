@@ -8,10 +8,11 @@ import type {
   Ticket,
   TicketFilters,
   Comment,
-  Task,
   Attachment,
   HourPack,
   HourPackStatus,
+  HourPackAudit,
+  Responsible,
 } from "./types";
 import { buildQuery } from "./api";
 
@@ -98,14 +99,6 @@ export function useComments(ticketId: string | undefined) {
   );
 }
 
-// ── Tasks ────────────────────────────────────────────
-
-export function useTasks(ticketId: string | undefined) {
-  return usePaginated<Task>(
-    ticketId ? `/tasks/by-ticket/${ticketId}` : null,
-  );
-}
-
 // ── Attachments ──────────────────────────────────────
 
 export function useAttachments(ticketId: string | undefined) {
@@ -130,4 +123,16 @@ export function useHourPackStatus(clientId: string | undefined) {
     fetcher<HourPackStatus>,
   );
   return { status: data?.data, isLoading, error, mutate };
+}
+
+// ── Audits ──────────────────────────────────────────
+
+export function useHourPackAudits(params?: { page?: number; limit?: number }) {
+  return usePaginated<HourPackAudit>(`/hour-packs/audits${buildQuery(params ?? {})}`);
+}
+
+// ── Responsibles ────────────────────────────────────
+
+export function useResponsibles(params?: { page?: number; limit?: number }) {
+  return usePaginated<Responsible>(`/responsibles${buildQuery(params ?? {})}`);
 }

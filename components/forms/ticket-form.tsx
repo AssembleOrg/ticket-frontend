@@ -6,8 +6,9 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { SearchSelect } from "@/components/ui/search-select";
 import { ticketsService } from "@/lib/services";
-import { useClients, useProjects } from "@/lib/hooks";
+import { useClients, useProjects, useResponsibles } from "@/lib/hooks";
 import type { Ticket, TicketPriority, TicketStatus } from "@/lib/types";
 
 interface TicketFormProps {
@@ -40,15 +41,19 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
   const [status, setStatus] = useState<string>("OPEN");
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [responsibleId, setResponsibleId] = useState("");
 
   const { data: clients } = useClients({ page: 1, limit: 100 });
   const { data: projects } = useProjects({ page: 1, limit: 100 });
+  const { data: responsibles } = useResponsibles({ page: 1, limit: 100 });
 
   const clientOptions = (clients ?? []).map((c) => ({ value: c.id, label: c.name }));
 
   const projectOptions = (projects ?? [])
     .filter((p) => !clientId || p.clientId === clientId)
     .map((p) => ({ value: p.id, label: p.name }));
+
+  const responsibleOptions = (responsibles ?? []).map((r) => ({ value: r.id, label: r.name }));
 
   useEffect(() => {
     if (initialData) {
@@ -58,6 +63,7 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
       setStatus(initialData.status);
       setClientId(initialData.clientId);
       setProjectId(initialData.projectId);
+      setResponsibleId(initialData.responsibleId ?? "");
     } else {
       setTitle("");
       setDescription("");
@@ -65,6 +71,7 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
       setStatus("OPEN");
       setClientId("");
       setProjectId("");
+      setResponsibleId("");
     }
   }, [initialData, open]);
 
@@ -84,8 +91,7 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
           description,
           priority: priority as TicketPriority,
           status: status as TicketStatus,
-          clientId,
-          projectId,
+          responsibleId: responsibleId || undefined,
         });
         toast.success("Ticket actualizado");
       } else {
@@ -95,6 +101,7 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
           priority: priority as TicketPriority,
           clientId,
           projectId,
+          responsibleId: responsibleId || undefined,
         });
         toast.success("Ticket creado correctamente");
       }
@@ -153,8 +160,8 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
         )}
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-white/70">Cliente *</label>
-          <Select
-            placeholder="Seleccionar cliente"
+          <SearchSelect
+            placeholder="Buscar cliente..."
             options={clientOptions}
             value={clientId}
             onChange={(v) => {
@@ -165,11 +172,21 @@ export function TicketForm({ open, onClose, onSuccess, initialData }: TicketForm
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-white/70">Proyecto *</label>
-          <Select
-            placeholder={clientId ? "Seleccionar proyecto" : "Primero seleccioná un cliente"}
+          <SearchSelect
+            placeholder={clientId ? "Buscar proyecto..." : "Primero seleccioná un cliente"}
             options={projectOptions}
             value={projectId}
             onChange={setProjectId}
+            disabled={!clientId}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-white/70">Responsable</label>
+          <SearchSelect
+            placeholder="Buscar responsable..."
+            options={responsibleOptions}
+            value={responsibleId}
+            onChange={setResponsibleId}
           />
         </div>
       </form>

@@ -1,28 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, FolderOpen, Search, Menu, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Ticket, Users, FolderOpen, UserCheck, ClipboardList, Search, Menu, X, LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar } from "@/components/ui/avatar";
+import { logout } from "@/lib/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
+  { href: "/responsables", label: "Responsables", icon: UserCheck },
+  { href: "/auditoria", label: "Auditoría", icon: ClipboardList },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   function closeMobileMenu() {
     setMobileMenuOpen(false);
   }
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await logout();
+      router.push("/login");
+    } catch {
+      toast.error("Error al cerrar sesión");
+    }
+  }
+
   return (
-    <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-background/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/6 bg-background/80 backdrop-blur-xl">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-sm bg-neon" />
@@ -57,16 +83,37 @@ export function Navbar() {
             <input
               type="text"
               placeholder="Buscar..."
-              className="h-9 w-56 rounded-lg border border-white/[0.08] bg-white/5 pl-9 pr-3 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-white/20"
+              className="h-9 w-56 rounded-lg border border-white/8 bg-white/5 pl-9 pr-3 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-white/20"
             />
           </div>
-          <Avatar name="Admin" size="sm" />
+
+          {/* User menu */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setUserMenuOpen((prev) => !prev)}
+              className="cursor-pointer"
+            >
+              <Avatar name="Admin" size="sm" />
+            </button>
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-44 rounded-lg border border-white/8 bg-[#111117] py-1 shadow-xl">
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             aria-label={mobileMenuOpen ? "Cerrar menu" : "Abrir menu"}
             aria-expanded={mobileMenuOpen}
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/8 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden"
           >
             {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -74,7 +121,7 @@ export function Navbar() {
       </div>
 
       {mobileMenuOpen ? (
-        <nav className="grid gap-1 border-t border-white/[0.06] px-4 py-3 md:hidden">
+        <nav className="grid gap-1 border-t border-white/6 px-4 py-3 md:hidden">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href);
             return (
@@ -93,6 +140,13 @@ export function Navbar() {
               </Link>
             );
           })}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10"
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar sesión
+          </button>
         </nav>
       ) : null}
     </header>

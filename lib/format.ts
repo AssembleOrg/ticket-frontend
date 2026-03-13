@@ -1,4 +1,4 @@
-import type { TicketStatus, TicketPriority, TaskStatus } from "./types";
+import type { TicketStatus, TicketPriority } from "./types";
 
 export const statusLabels: Record<TicketStatus, string> = {
   OPEN: "Abierto",
@@ -12,12 +12,6 @@ export const priorityLabels: Record<TicketPriority, string> = {
   MEDIUM: "Media",
   HIGH: "Alta",
   CRITICAL: "Urgente",
-};
-
-export const taskStatusLabels: Record<TaskStatus, string> = {
-  PENDING: "Pendiente",
-  IN_PROGRESS: "En progreso",
-  DONE: "Completada",
 };
 
 export function formatDate(iso: string): string {

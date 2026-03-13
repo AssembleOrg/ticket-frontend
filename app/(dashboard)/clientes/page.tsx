@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Plus, Eye, Pencil, Trash2, Mail, Phone, Building2 } from "lucide-react";
 import { toast } from "sonner";
@@ -26,10 +26,7 @@ export default function ClientesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<Client | undefined>();
   const [view, setView] = useState<ViewMode>("grid");
-
-  useEffect(() => {
-    setView(isDesktop ? "list" : "grid");
-  }, [isDesktop]);
+  const effectiveView: ViewMode = isDesktop ? "list" : view;
 
   const { data: clients, pagination, isLoading, mutate } = useClients({ page, limit });
 
@@ -89,11 +86,16 @@ export default function ClientesPage() {
       {/* Search + View toggle */}
       <div className="flex items-center gap-3">
         <SearchBar placeholder="Buscar clientes..." value={search} onChange={setSearch} />
-        <ViewToggle view={view} onChange={setView} />
+        <ViewToggle
+          view={effectiveView}
+          onChange={(nextView) => {
+            if (!isDesktop) setView(nextView);
+          }}
+        />
       </div>
 
       {isLoading ? (
-        view === "grid" ? (
+        effectiveView === "grid" ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-44" />
@@ -105,7 +107,7 @@ export default function ClientesPage() {
       ) : (
         <>
           {/* Grid view */}
-          {view === "grid" ? (
+          {effectiveView === "grid" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filtered?.map((c) => (
                 <Card key={c.id} className="flex flex-col gap-4 p-5">
@@ -132,7 +134,7 @@ export default function ClientesPage() {
                       <Building2 className="h-3 w-3 shrink-0" /> {c.company}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3">
+                  <div className="flex items-center gap-2 border-t border-white/6 pt-3">
                     <Link
                       href={`/clientes/${c.id}`}
                       className="flex-1 rounded-lg border border-white/10 py-1.5 text-center text-xs font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white"
@@ -179,7 +181,7 @@ export default function ClientesPage() {
                     {filtered?.map((c) => (
                       <tr
                         key={c.id}
-                        className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02]"
+                        className="border-t border-white/4 transition-colors hover:bg-white/2"
                       >
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">

@@ -12,10 +12,11 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { StatusBadge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
-import { useClient, useProjectsByClient, useHourPackStatus } from "@/lib/hooks";
+import { useClient, useProjectsByClient, useHourPackStatus, useHourPackByClient } from "@/lib/hooks";
 import { clientsService } from "@/lib/services";
 import { ClientForm } from "@/components/forms/client-form";
 import { HourPackForm } from "@/components/forms/hour-pack-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function ClienteDetailPage({
   params,
@@ -27,16 +28,18 @@ export default function ClienteDetailPage({
   const { client, isLoading: loadingClient, mutate } = useClient(id);
   const { data: projects, isLoading: loadingProjects } = useProjectsByClient(id);
   const { status: hourPackStatus, isLoading: loadingHours, mutate: mutateHours } = useHourPackStatus(id);
+  const { hourPack, mutate: mutateHourPack } = useHourPackByClient(id);
 
   const [showEdit, setShowEdit] = useState(false);
   const [showHourPack, setShowHourPack] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [editHourPackData, setEditHourPackData] = useState<{ id: string; weeklyHours: number; active: boolean } | undefined>();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasHourPack = !!hourPackStatus;
   const packWeeklyHours = Number(
     hourPackStatus?.pack?.weeklyHours ?? hourPackStatus?.hourPack?.weeklyHours ?? 0,
   );
-  const packIsActive = hourPackStatus?.pack?.active ?? hourPackStatus?.hourPack?.active ?? true;
+  const packIsActive = hourPack?.active ?? true;
   const consumedMinutes = hourPackStatus?.currentMonth?.consumedMinutes ?? 0;
   const availableMinutes =
     hourPackStatus?.currentMonth?.totalAvailableMinutes ??
@@ -47,15 +50,12 @@ export default function ClienteDetailPage({
     availableMinutes > 0 ? Math.round((consumedMinutes / availableMinutes) * 100) : 0;
 
   async function handleDelete() {
-    if (!confirm(`¿Eliminar a ${client?.name}? Esta acción no se puede deshacer.`)) return;
-    setDeleting(true);
     try {
       await clientsService.delete(id);
       toast.success("Cliente eliminado");
       router.push("/clientes");
     } catch {
       toast.error("Error al eliminar cliente");
-      setDeleting(false);
     }
   }
 
@@ -99,11 +99,22 @@ export default function ClienteDetailPage({
         initialData={client}
       />
 
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Eliminar cliente"
+        description={`¿Eliminar a ${client.name}? Se eliminarán todos sus proyectos y tickets asociados. Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+      />
+
       <HourPackForm
         open={showHourPack}
-        onClose={() => setShowHourPack(false)}
-        onSuccess={() => mutateHours()}
+        onClose={() => { setShowHourPack(false); setEditHourPackData(undefined); }}
+        onSuccess={() => { mutateHours(); mutateHourPack(); }}
         clientId={id}
+        editData={editHourPackData}
       />
 
       {/* Client header */}
@@ -135,9 +146,8 @@ export default function ClienteDetailPage({
           </Button>
           <Button
             variant="ghost"
-            loading={deleting}
             className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
           >
             <Trash2 className="h-4 w-4" />
             Eliminar
@@ -210,7 +220,20 @@ export default function ClienteDetailPage({
               <div className="rounded-lg border border-white/6 bg-white/2 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-white">Pack Mensual</span>
-                  <StatusBadge status={packIsActive ? "Activo" : "Inactivo"} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={packIsActive ? "Activo" : "Inactivo"} />
+                    <button
+                      onClick={() => {
+                        if (!hourPack?.id) return;
+                        setEditHourPackData({ id: hourPack.id, weeklyHours: packWeeklyHours, active: packIsActive });
+                        setShowHourPack(true);
+                      }}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-white/30 transition-colors hover:bg-white/10 hover:text-white"
+                      title="Editar pack"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <span className="text-white/30">

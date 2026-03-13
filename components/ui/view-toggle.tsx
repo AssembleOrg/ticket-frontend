@@ -11,7 +11,7 @@ interface ViewToggleProps {
 
 export function ViewToggle({ view, onChange }: ViewToggleProps) {
   return (
-    <div className="flex items-center rounded-lg border border-white/[0.08] bg-surface p-0.5">
+    <div className="flex items-center rounded-lg border border-white/8 bg-surface p-0.5">
       <button
         onClick={() => onChange("list")}
         className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${

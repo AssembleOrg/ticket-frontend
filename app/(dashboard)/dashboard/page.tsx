@@ -94,7 +94,7 @@ export default function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-t border-white/[0.06] text-left text-[11px] font-medium uppercase tracking-wider text-white/30">
+                  <tr className="border-t border-white/6 text-left text-[11px] font-medium uppercase tracking-wider text-white/30">
                     <th className="px-5 py-3">Código/Título</th>
                     <th className="px-5 py-3">Cliente</th>
                     <th className="px-5 py-3">Estado</th>
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                   {tickets?.map((t) => (
                     <tr
                       key={t.id}
-                      className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02]"
+                      className="border-t border-white/4 transition-colors hover:bg-white/2"
                     >
                       <td className="px-5 py-4">
                         <Link href={`/tickets/${t.id}`} className="group">

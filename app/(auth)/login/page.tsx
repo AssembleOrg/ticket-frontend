@@ -11,8 +11,8 @@ export default function LoginPage() {
           style={{ backgroundImage: "url('/images/BG Image.webp')" }}
         />
         {/* Gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/40 to-background" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60" />
+        <div className="absolute inset-0 bg-linear-to-r from-background/80 via-background/40 to-background" />
+        <div className="absolute inset-0 bg-linear-to-t from-background via-transparent to-background/60" />
 
         {/* Branding */}
         <div className="relative z-10 flex flex-col gap-4 p-10 pb-16">

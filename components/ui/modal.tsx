@@ -43,10 +43,10 @@ export function Modal({ open, onClose, title, children, footer, className = "" }
 
       {/* Panel */}
       <div
-        className={`relative flex max-h-[85dvh] w-full flex-col rounded-xl border border-white/[0.08] bg-[#111117] shadow-2xl sm:max-w-lg ${className}`}
+        className={`relative flex max-h-[85dvh] w-full flex-col rounded-xl border border-white/8 bg-[#111117] shadow-2xl sm:max-w-lg ${className}`}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/6 px-6 py-4">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button
             onClick={onClose}
@@ -63,7 +63,7 @@ export function Modal({ open, onClose, title, children, footer, className = "" }
 
         {/* Footer - sticky at bottom */}
         {footer ? (
-          <div className="shrink-0 border-t border-white/[0.06] px-6 py-4">
+          <div className="shrink-0 border-t border-white/6 px-6 py-4">
             {footer}
           </div>
         ) : null}

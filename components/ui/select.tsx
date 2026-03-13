@@ -33,7 +33,7 @@ export function Select({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-10 w-full appearance-none rounded-lg border border-white/[0.08] bg-surface pl-3 pr-9 text-sm text-white outline-none transition-colors focus:border-white/20 cursor-pointer [&>option]:bg-[#1a1a22] [&>option]:text-white"
+          className="h-10 w-full appearance-none rounded-lg border border-white/8 bg-surface pl-3 pr-9 text-sm text-white outline-none transition-colors focus:border-white/20 cursor-pointer [&>option]:bg-[#1a1a22] [&>option]:text-white"
         >
           <option value="">{placeholder}</option>
           {options.map((opt) => (

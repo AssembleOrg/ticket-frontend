@@ -10,8 +10,6 @@ import type {
   TicketHistory,
   Comment,
   CreateCommentPayload,
-  Task,
-  CreateTaskPayload,
   TimeEntry,
   CreateTimeEntryPayload,
   HourPack,
@@ -20,6 +18,8 @@ import type {
   HourPackAudit,
   Attachment,
   AttachmentUrl,
+  Responsible,
+  CreateResponsiblePayload,
 } from "./types";
 
 // ── Clients ──────────────────────────────────────────
@@ -80,25 +80,11 @@ export const commentsService = {
     api<void>(`/comments/${id}`, { method: "DELETE" }),
 };
 
-// ── Tasks ────────────────────────────────────────────
-
-export const tasksService = {
-  getByTicket: (ticketId: string, params?: { page?: number; limit?: number }) =>
-    api<Task[]>(`/tasks/by-ticket/${ticketId}${buildQuery(params ?? {})}`),
-  get: (id: string) => api<Task>(`/tasks/${id}`),
-  create: (data: CreateTaskPayload) =>
-    api<Task>("/tasks", { method: "POST", body: JSON.stringify(data) }),
-  update: (id: string, data: Partial<CreateTaskPayload & { status: string }>) =>
-    api<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  delete: (id: string) =>
-    api<void>(`/tasks/${id}`, { method: "DELETE" }),
-};
-
 // ── Time Entries ─────────────────────────────────────
 
 export const timeEntriesService = {
-  getByTask: (taskId: string) =>
-    api<TimeEntry[]>(`/time-entries/by-task/${taskId}`),
+  getByTicket: (ticketId: string) =>
+    api<TimeEntry[]>(`/time-entries/by-ticket/${ticketId}`),
   create: (data: CreateTimeEntryPayload) =>
     api<TimeEntry>("/time-entries", { method: "POST", body: JSON.stringify(data) }),
   delete: (id: string) =>
@@ -117,6 +103,8 @@ export const hourPacksService = {
     api<HourPackMonth[]>(`/hour-packs/${id}/months`),
   getAudits: (id: string) =>
     api<HourPackAudit[]>(`/hour-packs/${id}/audits`),
+  getAllAudits: (params?: { page?: number; limit?: number }) =>
+    api<HourPackAudit[]>(`/hour-packs/audits${buildQuery(params ?? {})}`),
   create: (data: { clientId: string; weeklyHours: number }) =>
     api<HourPack>("/hour-packs", { method: "POST", body: JSON.stringify(data) }),
   update: (
@@ -142,4 +130,18 @@ export const attachmentsService = {
     api<AttachmentUrl>(`/attachments/${id}/url`),
   delete: (id: string) =>
     api<void>(`/attachments/${id}`, { method: "DELETE" }),
+};
+
+// ── Responsibles ────────────────────────────────────
+
+export const responsiblesService = {
+  list: (params?: { page?: number; limit?: number }) =>
+    api<Responsible[]>(`/responsibles${buildQuery(params ?? {})}`),
+  get: (id: string) => api<Responsible>(`/responsibles/${id}`),
+  create: (data: CreateResponsiblePayload) =>
+    api<Responsible>("/responsibles", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateResponsiblePayload>) =>
+    api<Responsible>(`/responsibles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    api<void>(`/responsibles/${id}`, { method: "DELETE" }),
 };

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Eye, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { Plus, Eye, Pencil, CheckCircle, RotateCcw, Minus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/ui/search-bar";
@@ -12,8 +13,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge, PriorityBadge } from "@/components/ui/badge";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTickets } from "@/lib/hooks";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { ticketsService, timeEntriesService } from "@/lib/services";
 import { statusLabels, priorityLabels, formatDate } from "@/lib/format";
 import type { TicketStatus, TicketPriority, Ticket } from "@/lib/types";
 import { TicketForm } from "@/components/forms/ticket-form";
@@ -42,6 +46,11 @@ export default function TicketsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<Ticket | undefined>();
   const [view, setView] = useState<ViewMode>("grid");
+  const [closeTarget, setCloseTarget] = useState<Ticket | null>(null);
+  const [closeHours, setCloseHours] = useState(0);
+  const [closeMinutes, setCloseMinutes] = useState(0);
+  const [closingTicket, setClosingTicket] = useState(false);
+  const [reopenTarget, setReopenTarget] = useState<Ticket | null>(null);
 
   useEffect(() => {
     setView(isDesktop ? "list" : "grid");
@@ -76,6 +85,46 @@ export default function TicketsPage() {
     setPage(1);
   }
 
+  async function handleCloseTicket() {
+    if (!closeTarget) return;
+    const totalMins = closeHours * 60 + closeMinutes;
+    if (totalMins <= 0) {
+      toast.error("Ingresá el tiempo dedicado antes de cerrar");
+      return;
+    }
+    setClosingTicket(true);
+    try {
+      await timeEntriesService.create({
+        minutes: totalMins,
+        description: "Cierre de ticket",
+        loggedBy: "Admin",
+        ticketId: closeTarget.id,
+      });
+      await ticketsService.update(closeTarget.id, { status: "CLOSED" });
+      mutate();
+      setCloseTarget(null);
+      setCloseHours(0);
+      setCloseMinutes(0);
+      toast.success("Ticket cerrado");
+    } catch {
+      toast.error("Error al cerrar ticket");
+    } finally {
+      setClosingTicket(false);
+    }
+  }
+
+  async function handleReopenTicket() {
+    if (!reopenTarget) return;
+    try {
+      await ticketsService.update(reopenTarget.id, { status: "IN_PROGRESS" });
+      mutate();
+      setReopenTarget(null);
+      toast.success("Ticket reabierto");
+    } catch {
+      toast.error("Error al reabrir ticket");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -94,6 +143,103 @@ export default function TicketsPage() {
         onClose={handleCloseForm}
         onSuccess={() => mutate()}
         initialData={editTarget}
+      />
+
+      {/* Close ticket modal */}
+      <Modal
+        open={closeTarget !== null}
+        onClose={() => setCloseTarget(null)}
+        title="Cerrar ticket"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setCloseTarget(null)}>
+              Cancelar
+            </Button>
+            <Button loading={closingTicket} onClick={handleCloseTicket}>
+              <CheckCircle className="h-4 w-4" />
+              Cerrar ticket
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-5">
+          <p className="text-sm text-white/50">
+            Indicá el tiempo total dedicado a este ticket antes de cerrarlo.
+          </p>
+          <div className="flex items-center justify-center gap-6">
+            <div className="flex flex-col items-center gap-2">
+              <label className="text-sm font-medium text-white/50">Horas</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCloseHours(Math.max(0, closeHours - 1))}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  max={999}
+                  value={closeHours}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    if (!isNaN(n)) setCloseHours(Math.max(0, Math.min(999, n)));
+                  }}
+                  className="h-12 w-16 rounded-lg border border-white/10 bg-white/5 text-center text-2xl font-bold text-white outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCloseHours(Math.min(999, closeHours + 1))}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <span className="mt-6 text-2xl font-bold text-white/30">:</span>
+            <div className="flex flex-col items-center gap-2">
+              <label className="text-sm font-medium text-white/50">Minutos</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCloseMinutes(Math.max(0, closeMinutes - 1))}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={closeMinutes}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    if (!isNaN(n)) setCloseMinutes(Math.max(0, Math.min(59, n)));
+                  }}
+                  className="h-12 w-16 rounded-lg border border-white/10 bg-white/5 text-center text-2xl font-bold text-white outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCloseMinutes(Math.min(59, closeMinutes + 1))}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reopen ticket confirmation */}
+      <ConfirmDialog
+        open={reopenTarget !== null}
+        onClose={() => setReopenTarget(null)}
+        onConfirm={handleReopenTicket}
+        title="Reabrir ticket"
+        description="¿Querés reabrir este ticket? Se cambiará el estado a En progreso."
+        confirmLabel="Reabrir"
       />
 
       {/* Search + Filters + View toggle */}
@@ -150,6 +296,23 @@ export default function TicketsPage() {
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
+                    {t.status === "CLOSED" ? (
+                      <button
+                        onClick={() => setReopenTarget(t)}
+                        className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/10 hover:text-amber-400"
+                        title="Reabrir"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setCloseTarget(t)}
+                        className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/10 hover:text-green-400"
+                        title="Cerrar"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -218,6 +381,23 @@ export default function TicketsPage() {
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
+                            {t.status === "CLOSED" ? (
+                              <button
+                                onClick={() => setReopenTarget(t)}
+                                className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/10 hover:text-amber-400"
+                                title="Reabrir"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setCloseTarget(t)}
+                                className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/10 hover:text-green-400"
+                                title="Cerrar"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

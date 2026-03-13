@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -14,17 +14,27 @@ import {
   Building2,
   FolderOpen,
   Calendar,
-  Square,
-  SquareCheckBig,
+  Clock,
+  Trash2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Minus,
+  RotateCcw,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { Modal } from "@/components/ui/modal";
 import { StatusBadge, PriorityBadge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTicket, useComments, useTasks, useAttachments } from "@/lib/hooks";
-import { commentsService, tasksService, attachmentsService } from "@/lib/services";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { TicketForm } from "@/components/forms/ticket-form";
+import { useTicket } from "@/lib/hooks";
+import { commentsService, attachmentsService, timeEntriesService, ticketsService } from "@/lib/services";
+import type { Attachment } from "@/lib/types";
 import {
   statusLabels,
   priorityLabels,
@@ -34,6 +44,164 @@ import {
   minutesToHours,
 } from "@/lib/format";
 
+function Lightbox({
+  attachments,
+  initialIndex,
+  onClose,
+  onDelete,
+}: {
+  attachments: Attachment[];
+  initialIndex: number;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+}) {
+  const [index, setIndex] = useState(initialIndex);
+  const current = attachments[index];
+
+  const goNext = useCallback(() => {
+    setIndex((i) => (i + 1) % attachments.length);
+  }, [attachments.length]);
+
+  const goPrev = useCallback(() => {
+    setIndex((i) => (i - 1 + attachments.length) % attachments.length);
+  }, [attachments.length]);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") goNext();
+      else if (e.key === "ArrowLeft") goPrev();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose, goNext, goPrev]);
+
+  if (!current) return null;
+
+  const url = current.url;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="absolute inset-0" onClick={onClose} />
+
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-10">
+        <span className="text-sm text-white/60">{current.originalName}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onDelete(current.id)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-red-500/20 hover:text-red-400 cursor-pointer"
+            title="Eliminar"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          {url && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+              title="Abrir original"
+            >
+              <Download className="h-4 w-4" />
+            </a>
+          )}
+          <button
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {attachments.length > 1 && (
+        <>
+          <button
+            onClick={goPrev}
+            className="absolute left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={goNext}
+            className="absolute right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
+      )}
+
+      <div className="relative z-0 max-h-[80vh] max-w-[90vw]">
+        {url ? (
+          <img
+            src={url}
+            alt={current.originalName}
+            className="max-h-[80vh] max-w-[90vw] rounded-lg object-contain"
+          />
+        ) : (
+          <div className="flex h-64 w-96 items-center justify-center rounded-lg bg-white/5">
+            <FileText className="h-16 w-16 text-white/20" />
+            <p className="ml-4 text-white/40">Vista previa no disponible</p>
+          </div>
+        )}
+      </div>
+
+      {attachments.length > 1 && (
+        <div className="absolute bottom-4 text-sm text-white/40">
+          {index + 1} / {attachments.length}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SpinnerInput({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 99,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <label className="text-sm font-medium text-white/50">{label}</label>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(e) => {
+            const n = parseInt(e.target.value, 10);
+            if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
+          }}
+          className="h-12 w-16 rounded-lg border border-white/10 bg-white/5 text-center text-2xl font-bold text-white outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, value + 1))}
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white cursor-pointer"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function TicketDetailPage({
   params,
 }: {
@@ -41,14 +209,26 @@ export default function TicketDetailPage({
 }) {
   const { id } = use(params);
   const { ticket, isLoading: loadingTicket, mutate: mutateTicket } = useTicket(id);
-  const { data: comments, mutate: mutateComments } = useComments(id);
-  const { data: tasks, mutate: mutateTasks } = useTasks(id);
-  const { data: attachments, mutate: mutateAttachments } = useAttachments(id);
+
+  const comments = ticket?.comments;
+  const attachments = ticket?.attachments;
+  const totalMinutes = ticket?.totalMinutes ?? 0;
 
   const [comment, setComment] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+  const [showEditTicket, setShowEditTicket] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closeHours, setCloseHours] = useState(0);
+  const [closeMinutes, setCloseMinutes] = useState(0);
+  const [closingTicket, setClosingTicket] = useState(false);
+  const [showReopenConfirm, setShowReopenConfirm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [deleteAttachmentId, setDeleteAttachmentId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const completedTasks = tasks?.filter((t) => t.status === "DONE").length ?? 0;
+  const imageAttachments = attachments?.filter((a) => a.mimeType.startsWith("image/")) ?? [];
+  const fileAttachments = attachments?.filter((a) => !a.mimeType.startsWith("image/")) ?? [];
 
   async function handleSendComment() {
     if (!comment.trim() || !ticket) return;
@@ -61,7 +241,7 @@ export default function TicketDetailPage({
         ticketId: ticket.id,
       });
       setComment("");
-      mutateComments();
+      mutateTicket();
       toast.success("Comentario agregado");
     } catch {
       toast.error("Error al enviar comentario");
@@ -70,22 +250,83 @@ export default function TicketDetailPage({
     }
   }
 
-  async function handleToggleTask(taskId: string, currentStatus: string) {
-    const newStatus = currentStatus === "DONE" ? "PENDING" : "DONE";
+  async function handleCloseTicket() {
+    if (!ticket) return;
+    const totalMins = closeHours * 60 + closeMinutes;
+    if (totalMins <= 0) {
+      toast.error("Ingresá el tiempo dedicado antes de cerrar");
+      return;
+    }
+    setClosingTicket(true);
     try {
-      await tasksService.update(taskId, { status: newStatus });
-      mutateTasks();
+      await timeEntriesService.create({
+        minutes: totalMins,
+        description: "Cierre de ticket",
+        loggedBy: "Admin",
+        ticketId: ticket.id,
+      });
+      await ticketsService.update(ticket.id, { status: "CLOSED" });
+      mutateTicket();
+      setShowCloseModal(false);
+      setCloseHours(0);
+      setCloseMinutes(0);
+      toast.success("Ticket cerrado");
     } catch {
-      toast.error("Error al actualizar tarea");
+      toast.error("Error al cerrar ticket");
+    } finally {
+      setClosingTicket(false);
     }
   }
 
-  async function handleDownload(attachmentId: string) {
+  async function handleReopenTicket() {
+    if (!ticket) return;
     try {
-      const res = await attachmentsService.getUrl(attachmentId);
-      window.open(res.data.signedUrl, "_blank");
+      await ticketsService.update(ticket.id, { status: "IN_PROGRESS" });
+      mutateTicket();
+      setShowReopenConfirm(false);
+      toast.success("Ticket reabierto");
     } catch {
-      toast.error("Error al obtener URL del archivo");
+      toast.error("Error al reabrir ticket");
+    }
+  }
+
+  function handleDownload(url: string | null) {
+    if (url) window.open(url, "_blank");
+    else toast.error("URL no disponible");
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !ticket) return;
+    setUploading(true);
+    try {
+      await attachmentsService.upload(file, ticket.id, "Admin");
+      mutateTicket();
+      toast.success("Archivo subido");
+    } catch {
+      toast.error("Error al subir archivo");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleDeleteAttachment() {
+    if (!deleteAttachmentId) return;
+    try {
+      await attachmentsService.delete(deleteAttachmentId);
+      mutateTicket();
+      toast.success("Archivo eliminado");
+      if (lightboxIndex !== null) {
+        const allAttachments = [...imageAttachments, ...fileAttachments];
+        if (allAttachments[lightboxIndex]?.id === deleteAttachmentId) {
+          setLightboxIndex(null);
+        }
+      }
+    } catch {
+      toast.error("Error al eliminar archivo");
+    } finally {
+      setDeleteAttachmentId(null);
     }
   }
 
@@ -119,6 +360,8 @@ export default function TicketDetailPage({
     );
   }
 
+  const isClosed = ticket.status === "CLOSED";
+
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumb
@@ -127,6 +370,73 @@ export default function TicketDetailPage({
           { label: `#${ticket.code}` },
         ]}
       />
+
+      <TicketForm
+        open={showEditTicket}
+        onClose={() => setShowEditTicket(false)}
+        onSuccess={() => mutateTicket()}
+        initialData={ticket}
+      />
+
+      {/* Close ticket modal with time spinner */}
+      <Modal
+        open={showCloseModal}
+        onClose={() => setShowCloseModal(false)}
+        title="Cerrar ticket"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={() => setShowCloseModal(false)}>
+              Cancelar
+            </Button>
+            <Button loading={closingTicket} onClick={handleCloseTicket}>
+              <CheckCircle className="h-4 w-4" />
+              Cerrar ticket
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-5">
+          <p className="text-sm text-white/50">
+            Indicá el tiempo total dedicado a este ticket antes de cerrarlo.
+          </p>
+          <div className="flex items-center justify-center gap-6">
+            <SpinnerInput label="Horas" value={closeHours} onChange={setCloseHours} max={999} />
+            <span className="mt-6 text-2xl font-bold text-white/30">:</span>
+            <SpinnerInput label="Minutos" value={closeMinutes} onChange={setCloseMinutes} max={59} />
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={deleteAttachmentId !== null}
+        onClose={() => setDeleteAttachmentId(null)}
+        onConfirm={handleDeleteAttachment}
+        title="Eliminar archivo"
+        description="¿Eliminar este archivo adjunto? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        open={showReopenConfirm}
+        onClose={() => setShowReopenConfirm(false)}
+        onConfirm={handleReopenTicket}
+        title="Reabrir ticket"
+        description="¿Querés reabrir este ticket? Se cambiará el estado a En progreso."
+        confirmLabel="Reabrir"
+      />
+
+      {lightboxIndex !== null && (
+        <Lightbox
+          attachments={[...imageAttachments, ...fileAttachments]}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onDelete={(id) => {
+            setLightboxIndex(null);
+            setDeleteAttachmentId(id);
+          }}
+        />
+      )}
 
       {/* Ticket header */}
       <Card className="p-6">
@@ -155,17 +465,30 @@ export default function TicketDetailPage({
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(ticket.createdAt)}
               </span>
+              {totalMinutes > 0 && (
+                <span className="flex items-center gap-1.5 text-neon">
+                  <Clock className="h-3.5 w-3.5" />
+                  {minutesToHours(totalMinutes)}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => setShowEditTicket(true)}>
               <Pencil className="h-4 w-4" />
               Editar
             </Button>
-            <Button>
-              <CheckCircle className="h-4 w-4" />
-              Cerrar ticket
-            </Button>
+            {isClosed ? (
+              <Button variant="secondary" onClick={() => setShowReopenConfirm(true)}>
+                <RotateCcw className="h-4 w-4" />
+                Reabrir
+              </Button>
+            ) : (
+              <Button onClick={() => setShowCloseModal(true)}>
+                <CheckCircle className="h-4 w-4" />
+                Cerrar ticket
+              </Button>
+            )}
           </div>
         </div>
       </Card>
@@ -214,7 +537,6 @@ export default function TicketDetailPage({
                 <p className="text-sm text-white/30">Sin comentarios aún</p>
               ) : null}
 
-              {/* Comment input */}
               <div className="relative mt-2">
                 <input
                   type="text"
@@ -228,7 +550,7 @@ export default function TicketDetailPage({
                     }
                   }}
                   disabled={sendingComment}
-                  className="h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] pl-4 pr-10 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 disabled:opacity-50"
+                  className="h-10 w-full rounded-lg border border-white/8 bg-white/3 pl-4 pr-10 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 disabled:opacity-50"
                 />
                 <button
                   onClick={handleSendComment}
@@ -241,44 +563,6 @@ export default function TicketDetailPage({
             </div>
           </Card>
 
-          {/* Tasks */}
-          <Card>
-            <CardHeader
-              title="Tareas"
-              action={
-                <span className="text-xs text-white/30">
-                  {completedTasks}/{tasks?.length ?? 0} completadas
-                </span>
-              }
-            />
-            <div className="flex flex-col gap-1 px-5 pb-5">
-              {tasks?.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => handleToggleTask(t.id, t.status)}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-white/[0.03] text-left"
-                >
-                  {t.status === "DONE" ? (
-                    <SquareCheckBig className="h-5 w-5 shrink-0 text-neon" />
-                  ) : (
-                    <Square className="h-5 w-5 shrink-0 text-white/20" />
-                  )}
-                  <span
-                    className={`text-sm ${
-                      t.status === "DONE"
-                        ? "text-white/30 line-through"
-                        : "text-white/70"
-                    }`}
-                  >
-                    {t.title}
-                  </span>
-                </button>
-              ))}
-              {tasks?.length === 0 ? (
-                <p className="text-sm text-white/30">Sin tareas</p>
-              ) : null}
-            </div>
-          </Card>
         </div>
 
         {/* Right column */}
@@ -288,34 +572,88 @@ export default function TicketDetailPage({
             <CardHeader
               title="Archivos adjuntos"
               action={
-                <button className="flex h-7 w-7 items-center justify-center rounded-lg bg-neon/15 text-neon transition-colors hover:bg-neon/25">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-neon/15 text-neon transition-colors hover:bg-neon/25 disabled:opacity-30"
+                >
                   <Upload className="h-4 w-4" />
                 </button>
               }
             />
-            <div className="flex flex-col gap-3 px-5 pb-5">
-              {attachments?.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => handleDownload(a.id)}
-                  className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/[0.03] cursor-pointer text-left w-full"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.06]">
-                    {a.mimeType.startsWith("image/") ? (
-                      <ImageIcon className="h-5 w-5 text-blue-400" />
-                    ) : (
-                      <FileText className="h-5 w-5 text-red-400" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-white">{a.originalName}</p>
-                    <p className="text-xs text-white/30">{formatFileSize(a.size)}</p>
-                  </div>
-                </button>
-              ))}
-              {attachments?.length === 0 ? (
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleUpload}
+              className="hidden"
+            />
+            <div className="px-5 pb-5">
+              {imageAttachments.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {imageAttachments.map((a, idx) => (
+                    <div key={a.id} className="group relative">
+                      <button
+                        onClick={() => setLightboxIndex(idx)}
+                        className="relative aspect-square w-full overflow-hidden rounded-lg border border-white/6 bg-white/3 cursor-pointer transition-all hover:border-white/20"
+                      >
+                        {a.url ? (
+                          <img
+                            src={a.url}
+                            alt={a.originalName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <ImageIcon className="h-6 w-6 text-white/20 animate-pulse" />
+                          </div>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setDeleteAttachmentId(a.id)}
+                        className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white/60 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/80 hover:text-white cursor-pointer"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {fileAttachments.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {fileAttachments.map((a) => (
+                    <div
+                      key={a.id}
+                      className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/3"
+                    >
+                      <button
+                        onClick={() => handleDownload(a.url)}
+                        className="flex flex-1 items-center gap-3 cursor-pointer text-left"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/6">
+                          <FileText className="h-5 w-5 text-red-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm text-white truncate">{a.originalName}</p>
+                          <p className="text-xs text-white/30">{formatFileSize(a.size)}</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setDeleteAttachmentId(a.id)}
+                        className="shrink-0 flex h-7 w-7 items-center justify-center rounded-md text-white/20 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 cursor-pointer"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {attachments?.length === 0 && (
                 <p className="text-sm text-white/30">Sin archivos</p>
-              ) : null}
+              )}
             </div>
           </Card>
         </div>

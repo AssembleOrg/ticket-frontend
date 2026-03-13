@@ -73,8 +73,14 @@ export interface Ticket {
   priority: TicketPriority;
   clientId: string;
   projectId: string;
+  responsibleId?: string | null;
   client?: Client;
   project?: Project;
+  responsible?: Responsible;
+  comments?: Comment[];
+  timeEntries?: TimeEntry[];
+  attachments?: Attachment[];
+  totalMinutes?: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -86,6 +92,7 @@ export interface CreateTicketPayload {
   priority: TicketPriority;
   clientId: string;
   projectId: string;
+  responsibleId?: string;
 }
 
 export interface TicketFilters {
@@ -129,29 +136,6 @@ export interface CreateCommentPayload {
   ticketId: string;
 }
 
-// ── Tasks ────────────────────────────────────────────
-
-export type TaskStatus = "PENDING" | "IN_PROGRESS" | "DONE";
-
-export interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: TaskStatus;
-  estimatedMinutes: number;
-  ticketId: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-}
-
-export interface CreateTaskPayload {
-  title: string;
-  description: string;
-  estimatedMinutes: number;
-  ticketId: string;
-}
-
 // ── Time Entries ─────────────────────────────────────
 
 export interface TimeEntry {
@@ -159,7 +143,7 @@ export interface TimeEntry {
   minutes: number;
   description: string;
   loggedBy: string;
-  taskId: string;
+  ticketId: string;
   createdAt: string;
 }
 
@@ -167,7 +151,7 @@ export interface CreateTimeEntryPayload {
   minutes: number;
   description: string;
   loggedBy: string;
-  taskId: string;
+  ticketId: string;
 }
 
 // ── Hour Packs ───────────────────────────────────────
@@ -214,12 +198,13 @@ export interface HourPackStatus {
 export interface HourPackAudit {
   id: string;
   hourPackId: string;
-  field: string;
-  oldValue: string;
-  newValue: string;
-  reason: string;
+  action: string;
   changedBy: string;
+  reason: string;
+  previousValue: Record<string, any> | null;
+  newValue: Record<string, any> | null;
   createdAt: string;
+  hourPack?: HourPack & { client?: Client };
 }
 
 // ── Attachments ──────────────────────────────────────
@@ -233,9 +218,23 @@ export interface Attachment {
   ticketId: string;
   uploadedBy: string;
   createdAt: string;
+  url: string | null;
 }
 
 export interface AttachmentUrl {
-  signedUrl: string;
-  expiresIn: number;
+  url: string;
+  attachment: Attachment;
+}
+
+// ── Responsibles ────────────────────────────────────
+
+export interface Responsible {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateResponsiblePayload {
+  name: string;
 }

@@ -23,7 +23,7 @@ export function SearchBar({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full rounded-lg border border-white/[0.08] bg-surface pl-10 pr-4 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-white/20"
+        className="h-10 w-full rounded-lg border border-white/8 bg-surface pl-10 pr-4 text-sm text-white placeholder:text-white/30 outline-none transition-colors focus:border-white/20"
       />
     </div>
   );
