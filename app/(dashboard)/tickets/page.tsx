@@ -282,6 +282,9 @@ export default function TicketsPage() {
                     <span>{t.client?.name ?? "—"}</span>
                     <span>{t.project?.name ?? "—"}</span>
                   </div>
+                  <div className="text-xs text-white/40">
+                    <span>Resp: <span className="text-white/70">{t.responsible?.name ?? "No asignado"}</span></span>
+                  </div>
                   <div className="flex items-center gap-2 border-t border-white/6 pt-2">
                     <span className="flex-1 font-mono text-[11px] text-white/25">{formatDate(t.createdAt)}</span>
                     <Link
@@ -332,6 +335,7 @@ export default function TicketsPage() {
                       <th className="px-5 py-3">Ticket</th>
                       <th className="hidden px-5 py-3 sm:table-cell">Cliente</th>
                       <th className="hidden px-5 py-3 md:table-cell">Proyecto</th>
+                      <th className="px-5 py-3 text-left">Responsable</th>
                       <th className="px-5 py-3 text-center">Estado</th>
                       <th className="hidden px-5 py-3 text-center sm:table-cell">Prioridad</th>
                       <th className="hidden px-5 py-3 lg:table-cell">Fecha</th>
@@ -357,6 +361,9 @@ export default function TicketsPage() {
                         </td>
                         <td className="hidden px-5 py-4 text-sm text-white/50 md:table-cell">
                           {t.project?.name ?? "—"}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-white/50">
+                          {t.responsible?.name ?? "No asignado"}
                         </td>
                         <td className="px-5 py-4 text-center">
                           <StatusBadge status={statusLabels[t.status] ?? t.status} />
@@ -404,7 +411,7 @@ export default function TicketsPage() {
                     ))}
                     {filtered?.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-5 py-8 text-center text-sm text-white/30">
+                        <td colSpan={8} className="px-5 py-8 text-center text-sm text-white/30">
                           No se encontraron tickets
                         </td>
                       </tr>
