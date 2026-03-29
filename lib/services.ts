@@ -20,6 +20,8 @@ import type {
   AttachmentUrl,
   Responsible,
   CreateResponsiblePayload,
+  Receipt,
+  CreateReceiptPayload,
 } from "./types";
 
 // ── Clients ──────────────────────────────────────────
@@ -144,4 +146,19 @@ export const responsiblesService = {
     api<Responsible>(`/responsibles/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   delete: (id: string) =>
     api<void>(`/responsibles/${id}`, { method: "DELETE" }),
+};
+
+// ── Receipts ───────────────────────────────────────
+
+export const receiptsService = {
+  list: (params?: { page?: number; limit?: number }) =>
+    api<Receipt[]>(`/receipts${buildQuery(params ?? {})}`),
+  get: (id: string) => api<Receipt>(`/receipts/${id}`),
+  getNextNumber: () => api<{ nextNumber: number }>("/receipts/next-number"),
+  create: (data: CreateReceiptPayload) =>
+    api<Receipt>("/receipts", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateReceiptPayload>) =>
+    api<Receipt>(`/receipts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    api<void>(`/receipts/${id}`, { method: "DELETE" }),
 };

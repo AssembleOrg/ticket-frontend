@@ -13,6 +13,7 @@ import type {
   HourPackStatus,
   HourPackAudit,
   Responsible,
+  Receipt,
 } from "./types";
 import { buildQuery } from "./api";
 
@@ -163,4 +164,18 @@ export function useHourPackAudits(params?: { page?: number; limit?: number }) {
 
 export function useResponsibles(params?: { page?: number; limit?: number }) {
   return usePaginated<Responsible>(`/responsibles${buildQuery(params ?? {})}`);
+}
+
+// ── Receipts ───────────────────────────────────────
+
+export function useReceipts(params?: { page?: number; limit?: number }) {
+  return usePaginated<Receipt>(`/receipts${buildQuery(params ?? {})}`);
+}
+
+export function useReceipt(id: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse<Receipt>>(
+    id ? `/receipts/${id}` : null,
+    fetcher<Receipt>,
+  );
+  return { receipt: data?.data, isLoading, error, mutate };
 }

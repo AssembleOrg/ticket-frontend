@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, FolderOpen, UserCheck, ClipboardList, Search, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, FolderOpen, UserCheck, ClipboardList, FileText, Search, Menu, X, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/ui/avatar";
 import { logout } from "@/lib/auth";
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
   { href: "/responsables", label: "Responsables", icon: UserCheck },
+  { href: "/comprobantes", label: "Comprobantes", icon: FileText },
   { href: "/auditoria", label: "Auditoría", icon: ClipboardList },
 ];
 

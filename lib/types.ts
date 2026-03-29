@@ -238,3 +238,43 @@ export interface Responsible {
 export interface CreateResponsiblePayload {
   name: string;
 }
+
+// ── Receipts ───────────────────────────────────────
+
+export interface ReceiptItem {
+  quantity: number;
+  code: string;
+  description: string;
+  unitPrice: number;
+  taxPercent: number;
+  discountPercent: number;
+}
+
+export interface Receipt {
+  id: string;
+  receiptNumber: number;
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  paymentDate: string;
+  paymentMethod: string;
+  clientName: string;
+  items: ReceiptItem[];
+  subtotal: number;
+  discounts: number;
+  taxTotal: number;
+  totalPaid: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface CreateReceiptPayload {
+  companyName: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  paymentDate: string;
+  paymentMethod: string;
+  clientName: string;
+  items: ReceiptItem[];
+}
