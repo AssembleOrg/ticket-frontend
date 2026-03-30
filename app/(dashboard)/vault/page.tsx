@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Eye, EyeOff, Copy, Pencil, Trash2, Key, Globe, User, Users, Shield, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -20,6 +21,7 @@ function copyToClipboard(text: string) {
 }
 
 export default function VaultPage() {
+  const { isAdmin } = useAuth();
   const [entries, setEntries] = useState<VaultEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -156,10 +158,12 @@ export default function VaultPage() {
         title="Vault"
         subtitle={`${entries.length} credenciales`}
         action={
-          <Button onClick={openCreateForm}>
-            <Plus className="h-4 w-4" />
-            Nueva credencial
-          </Button>
+          isAdmin ? (
+            <Button onClick={openCreateForm}>
+              <Plus className="h-4 w-4" />
+              Nueva credencial
+            </Button>
+          ) : undefined
         }
       />
 
@@ -247,6 +251,7 @@ export default function VaultPage() {
                               )}
                             </div>
                           </div>
+                          {isAdmin && (
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => openEditForm(entry)} className="rounded-md p-1.5 text-white/30 hover:bg-white/10 hover:text-white/70">
                               <Pencil className="h-3.5 w-3.5" />
@@ -255,6 +260,7 @@ export default function VaultPage() {
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
+                          )}
                         </div>
 
                         {entry.username && (

@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ReceiptPreview } from "@/components/receipt-preview";
 import { useReceipts } from "@/lib/hooks";
 import { receiptsService } from "@/lib/services";
+import { RequireRole } from "@/components/require-role";
 import { formatDate } from "@/lib/format";
 import type { Receipt } from "@/lib/types";
 
@@ -33,6 +34,14 @@ function isWithin24h(createdAt: string): boolean {
 }
 
 export default function ComprobantesPage() {
+  return (
+    <RequireRole roles={["ADMIN"]}>
+      <ComprobantesContent />
+    </RequireRole>
+  );
+}
+
+function ComprobantesContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);

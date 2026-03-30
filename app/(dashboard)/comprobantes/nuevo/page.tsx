@@ -6,8 +6,13 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { ReceiptEditor } from "@/components/receipt-editor";
 import { receiptsService } from "@/lib/services";
+import { RequireRole } from "@/components/require-role";
 
 export default function NuevoComprobantePage() {
+  return <RequireRole roles={["ADMIN"]}><NuevoComprobanteContent /></RequireRole>;
+}
+
+function NuevoComprobanteContent() {
   const [nextNumber, setNextNumber] = useState<number | undefined>();
 
   useEffect(() => {

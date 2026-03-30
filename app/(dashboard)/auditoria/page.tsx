@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { useHourPackAudits } from "@/lib/hooks";
 import { formatDate, formatRelativeTime } from "@/lib/format";
+import { RequireRole } from "@/components/require-role";
 
 const actionLabels: Record<string, string> = {
   CREATED: "Creación",
@@ -34,6 +35,14 @@ function formatChange(prev: Record<string, any> | null, next: Record<string, any
 }
 
 export default function AuditoriaPage() {
+  return (
+    <RequireRole roles={["ADMIN"]}>
+      <AuditoriaContent />
+    </RequireRole>
+  );
+}
+
+function AuditoriaContent() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
 

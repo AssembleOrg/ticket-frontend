@@ -19,12 +19,15 @@ export function ResponsibleForm({ open, onClose, onSuccess, initialData }: Respo
   const isEditing = !!initialData;
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
+      setEmail(initialData.email ?? "");
     } else {
       setName("");
+      setEmail("");
     }
   }, [initialData, open]);
 
@@ -36,13 +39,18 @@ export function ResponsibleForm({ open, onClose, onSuccess, initialData }: Respo
       return;
     }
 
+    if (!email.trim() || !email.includes("@")) {
+      toast.error("El email es obligatorio y debe ser válido");
+      return;
+    }
+
     setLoading(true);
     try {
       if (isEditing) {
-        await responsiblesService.update(initialData.id, { name: name.trim() });
+        await responsiblesService.update(initialData.id, { name: name.trim(), email: email.trim() });
         toast.success("Responsable actualizado");
       } else {
-        await responsiblesService.create({ name: name.trim() });
+        await responsiblesService.create({ name: name.trim(), email: email.trim() });
         toast.success("Responsable creado");
       }
       onSuccess();
@@ -78,6 +86,17 @@ export function ResponsibleForm({ open, onClose, onSuccess, initialData }: Respo
           onChange={(e) => setName(e.target.value)}
           required
         />
+        <Input
+          label="Email *"
+          type="email"
+          placeholder="email@ejemplo.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <p className="text-[11px] text-white/25">
+          El email debe coincidir con una cuenta autorizada en el sistema.
+        </p>
       </form>
     </Modal>
   );

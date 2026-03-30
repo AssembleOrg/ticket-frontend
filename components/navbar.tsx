@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Ticket, Users, FolderOpen, UserCheck, ClipboardList, FileText, Search, Menu, X, LogOut, Wrench, Columns3, Shield, BookOpen, CalendarDays } from "lucide-react";
@@ -8,39 +8,40 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/ui/avatar";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { useAuth } from "@/lib/auth-context";
 import { logout } from "@/lib/auth";
+import type { UserRole } from "@/lib/types";
 
-const navItems = [
+const navItems: { href: string; label: string; icon: typeof LayoutDashboard; roles?: UserRole[] }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tickets", label: "Tickets", icon: Ticket },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/proyectos", label: "Proyectos", icon: FolderOpen },
-  { href: "/responsables", label: "Responsables", icon: UserCheck },
-  { href: "/comprobantes", label: "Comprobantes", icon: FileText },
+  { href: "/responsables", label: "Responsables", icon: UserCheck, roles: ["ADMIN"] },
+  { href: "/comprobantes", label: "Comprobantes", icon: FileText, roles: ["ADMIN"] },
   { href: "/vault", label: "Vault", icon: Shield },
   { href: "/tablero", label: "Tablero", icon: Columns3 },
   { href: "/wiki", label: "Wiki", icon: BookOpen },
   { href: "/calendario", label: "Calendario", icon: CalendarDays },
-  { href: "/auditoria", label: "Auditoría", icon: ClipboardList },
+  { href: "/auditoria", label: "Auditoría", icon: ClipboardList, roles: ["ADMIN"] },
   { href: "/herramientas", label: "Herramientas", icon: Wrench },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, isAdmin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [userName, setUserName] = useState("Usuario");
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    import("@/lib/auth").then(({ getMe }) => {
-      getMe().then((user) => {
-        if (user.name) setUserName(user.name);
-        else if (user.email) setUserName(user.email.split("@")[0]);
-      }).catch(() => {});
-    });
-  }, []);
+  const userName = user?.name ?? user?.email?.split("@")[0] ?? "Usuario";
+  const userRole = user?.role;
+
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => !item.roles || (userRole && item.roles.includes(userRole))),
+    [userRole],
+  );
 
   function closeMobileMenu() {
     setMobileMenuOpen(false);
@@ -127,7 +128,7 @@ export function Navbar() {
       {/* Desktop nav - scrollable horizontal bar below */}
       <nav className="hidden md:block border-t border-white/4">
         <div className="flex items-center gap-1 px-4 sm:px-6 overflow-x-auto scrollbar-none">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {visibleNavItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href);
             return (
               <Link
@@ -150,7 +151,7 @@ export function Navbar() {
       {/* Mobile menu */}
       {mobileMenuOpen ? (
         <nav className="grid gap-1 border-t border-white/6 px-4 py-3 md:hidden max-h-[70vh] overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {visibleNavItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname.startsWith(href);
             return (
               <Link

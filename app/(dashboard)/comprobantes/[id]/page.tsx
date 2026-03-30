@@ -11,6 +11,7 @@ import { ReceiptPreview } from "@/components/receipt-preview";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReceipt } from "@/lib/hooks";
 import { exportReceiptToPdf } from "@/lib/export-pdf";
+import { RequireRole } from "@/components/require-role";
 
 function formatReceiptNumber(n: number): string {
   return `CP-${String(n).padStart(8, "0")}`;
@@ -21,6 +22,10 @@ function isWithin24h(createdAt: string): boolean {
 }
 
 export default function EditarComprobantePage({ params }: { params: Promise<{ id: string }> }) {
+  return <RequireRole roles={["ADMIN"]}><EditarComprobanteContent params={params} /></RequireRole>;
+}
+
+function EditarComprobanteContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { receipt, isLoading } = useReceipt(id);
   const [exporting, setExporting] = useState(false);

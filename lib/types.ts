@@ -257,12 +257,14 @@ export interface AttachmentUrl {
 export interface Responsible {
   id: string;
   name: string;
+  email: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateResponsiblePayload {
   name: string;
+  email?: string;
 }
 
 // ── Receipts ───────────────────────────────────────

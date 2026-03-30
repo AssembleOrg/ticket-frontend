@@ -22,8 +22,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardStats } from "@/lib/hooks";
 import { statusLabels, priorityLabels } from "@/lib/format";
 import { TicketForm } from "@/components/forms/ticket-form";
+import { useAuth } from "@/lib/auth-context";
 
 export default function DashboardPage() {
+  const { isAdmin } = useAuth();
   const [showTicketForm, setShowTicketForm] = useState(false);
   const { stats, isLoading, mutate } = useDashboardStats();
 
@@ -87,18 +89,20 @@ export default function DashboardPage() {
             <p className="text-[11px] text-white/30">Crear ticket</p>
           </div>
         </button>
-        <Link
-          href="/comprobantes/nuevo"
-          className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/10 transition-colors group-hover:bg-neon/20">
-            <FileText className="h-4 w-4 text-neon" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white">Comprobante</p>
-            <p className="text-[11px] text-white/30">Nuevo comprobante</p>
-          </div>
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/comprobantes/nuevo"
+            className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/10 transition-colors group-hover:bg-neon/20">
+              <FileText className="h-4 w-4 text-neon" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">Comprobante</p>
+              <p className="text-[11px] text-white/30">Nuevo comprobante</p>
+            </div>
+          </Link>
+        )}
         <Link
           href="/clientes"
           className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"

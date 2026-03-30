@@ -14,9 +14,18 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ResponsibleForm } from "@/components/forms/responsible-form";
 import { useResponsibles } from "@/lib/hooks";
 import { responsiblesService } from "@/lib/services";
+import { RequireRole } from "@/components/require-role";
 import type { Responsible } from "@/lib/types";
 
 export default function ResponsablesPage() {
+  return (
+    <RequireRole roles={["ADMIN"]}>
+      <ResponsablesContent />
+    </RequireRole>
+  );
+}
+
+function ResponsablesContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
@@ -27,7 +36,7 @@ export default function ResponsablesPage() {
   const { data: responsibles, pagination, isLoading, mutate } = useResponsibles({ page, limit });
 
   const filtered = responsibles?.filter(
-    (r) => !search || r.name.toLowerCase().includes(search.toLowerCase()),
+    (r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || (r.email ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
   async function handleDelete() {
@@ -98,6 +107,7 @@ export default function ResponsablesPage() {
               <thead>
                 <tr className="text-left text-[11px] font-medium uppercase tracking-wider text-white/30">
                   <th className="px-5 py-3">Nombre</th>
+                  <th className="hidden px-5 py-3 sm:table-cell">Email</th>
                   <th className="px-5 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -110,8 +120,16 @@ export default function ResponsablesPage() {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar name={r.name} size="sm" />
-                        <span className="text-sm font-medium text-white">{r.name}</span>
+                        <div>
+                          <span className="text-sm font-medium text-white">{r.name}</span>
+                          {r.email && (
+                            <p className="text-xs text-white/30 sm:hidden">{r.email}</p>
+                          )}
+                        </div>
                       </div>
+                    </td>
+                    <td className="hidden px-5 py-4 sm:table-cell">
+                      <span className="text-sm text-white/40">{r.email ?? "—"}</span>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
@@ -133,7 +151,7 @@ export default function ResponsablesPage() {
                 ))}
                 {filtered?.length === 0 && (
                   <tr>
-                    <td colSpan={2} className="px-5 py-8 text-center text-sm text-white/30">
+                    <td colSpan={3} className="px-5 py-8 text-center text-sm text-white/30">
                       No se encontraron responsables
                     </td>
                   </tr>

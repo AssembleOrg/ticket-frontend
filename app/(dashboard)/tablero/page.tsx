@@ -5,6 +5,7 @@ import { Plus, Trash2, GripVertical, Calendar, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/lib/auth-context";
 import { useResponsibles } from "@/lib/hooks";
 import { boardCardsService } from "@/lib/services";
 import type { BoardCard, BoardColumn } from "@/lib/types";
@@ -29,6 +30,7 @@ function getCardColorClass(color: string | null): string {
 }
 
 export default function TableroPage() {
+  const { user, isAdmin } = useAuth();
   const { data: responsibles, isLoading: loadingResp } = useResponsibles({ page: 1, limit: 100 });
   const [selectedResponsible, setSelectedResponsible] = useState<string>("");
   const [cards, setCards] = useState<BoardCard[]>([]);
@@ -38,12 +40,15 @@ export default function TableroPage() {
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [dragCard, setDragCard] = useState<string | null>(null);
 
-  // Auto-select first responsible
+  // Auto-select: responsable sees own board, admin sees first
   useEffect(() => {
-    if (responsibles && responsibles.length > 0 && !selectedResponsible) {
-      setSelectedResponsible(responsibles[0].id);
+    if (!responsibles || responsibles.length === 0 || selectedResponsible) return;
+    if (!isAdmin && user?.email) {
+      const own = responsibles.find((r) => r.email === user.email);
+      if (own) { setSelectedResponsible(own.id); return; }
     }
-  }, [responsibles, selectedResponsible]);
+    setSelectedResponsible(responsibles[0].id);
+  }, [responsibles, selectedResponsible, isAdmin, user]);
 
   // Load cards when responsible changes
   useEffect(() => {
@@ -127,23 +132,25 @@ export default function TableroPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Tablero"
-        subtitle="Tablero de tareas por responsable"
+        subtitle={isAdmin ? "Tablero de tareas por responsable" : "Mi tablero"}
         action={
-          loadingResp ? (
-            <Skeleton className="h-10 w-40" />
-          ) : (
-            <select
-              value={selectedResponsible}
-              onChange={(e) => setSelectedResponsible(e.target.value)}
-              className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none [color-scheme:dark]"
-            >
-              {responsibles?.map((r) => (
-                <option key={r.id} value={r.id} className="bg-[#111117] text-white">
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          )
+          isAdmin ? (
+            loadingResp ? (
+              <Skeleton className="h-10 w-40" />
+            ) : (
+              <select
+                value={selectedResponsible}
+                onChange={(e) => setSelectedResponsible(e.target.value)}
+                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none [color-scheme:dark]"
+              >
+                {responsibles?.map((r) => (
+                  <option key={r.id} value={r.id} className="bg-[#111117] text-white">
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            )
+          ) : undefined
         }
       />
 

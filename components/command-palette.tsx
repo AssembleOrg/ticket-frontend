@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Ticket, Users, FolderOpen, FileText, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Ticket as TicketType, Client, Project, Receipt } from "@/lib/types";
 
 interface SearchResult {
@@ -23,6 +24,7 @@ const typeConfig = {
 
 export function CommandPalette() {
   const router = useRouter();
+  const { isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -69,12 +71,15 @@ export function CommandPalette() {
 
     setLoading(true);
     try {
-      const [tickets, clients, projects, receipts] = await Promise.allSettled([
+      const searches = [
         api<TicketType[]>(`/tickets?page=1&limit=5&search=${encodeURIComponent(q)}`),
         api<Client[]>(`/clients?page=1&limit=5&search=${encodeURIComponent(q)}`),
         api<Project[]>(`/projects?page=1&limit=5&search=${encodeURIComponent(q)}`),
-        api<Receipt[]>(`/receipts?page=1&limit=5&search=${encodeURIComponent(q)}`),
-      ]);
+        isAdmin
+          ? api<Receipt[]>(`/receipts?page=1&limit=5&search=${encodeURIComponent(q)}`)
+          : Promise.resolve({ data: [] as Receipt[] } as any),
+      ];
+      const [tickets, clients, projects, receipts] = await Promise.allSettled(searches);
 
       const items: SearchResult[] = [];
 
