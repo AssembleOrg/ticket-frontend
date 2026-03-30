@@ -43,7 +43,7 @@ export function Modal({ open, onClose, title, children, footer, className = "" }
 
       {/* Panel */}
       <div
-        className={`relative flex max-h-[85dvh] w-full flex-col rounded-xl border border-white/8 bg-[#111117] shadow-2xl sm:max-w-lg ${className}`}
+        className={`relative flex max-h-[85dvh] w-full flex-col rounded-xl border border-white/8 bg-[#111117] shadow-2xl ${className || "sm:max-w-lg"}`}
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/6 px-6 py-4">

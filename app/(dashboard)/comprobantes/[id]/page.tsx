@@ -34,9 +34,26 @@ function EditarComprobanteContent({ params }: { params: Promise<{ id: string }> 
     if (!receipt) return;
     setExporting(true);
     try {
+      const formattedDate = receipt.paymentDate
+        ? new Date(receipt.paymentDate + "T12:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "numeric", year: "numeric" })
+        : "";
       await exportReceiptToPdf(
         "receipt-preview-detail",
         `comprobante-${formatReceiptNumber(receipt.receiptNumber)}`,
+        {
+          companyName: receipt.companyName,
+          companyAddress: receipt.companyAddress,
+          companyPhone: receipt.companyPhone,
+          receiptNumber: formatReceiptNumber(receipt.receiptNumber),
+          paymentDate: formattedDate,
+          paymentMethod: receipt.paymentMethod,
+          clientName: receipt.clientName,
+          items: receipt.items ?? [],
+          subtotal: receipt.subtotal,
+          discounts: receipt.discounts,
+          taxTotal: receipt.taxTotal,
+          totalPaid: receipt.totalPaid,
+        },
       );
       toast.success("PDF descargado");
     } catch {

@@ -203,6 +203,20 @@ export function ReceiptEditor({ receipt, nextNumber }: ReceiptEditorProps) {
                 await exportReceiptToPdf(
                   "receipt-preview-editor",
                   `comprobante-${formatReceiptNumber(receiptNumber)}`,
+                  {
+                    companyName,
+                    companyAddress,
+                    companyPhone,
+                    receiptNumber: formatReceiptNumber(receiptNumber),
+                    paymentDate: formattedDate,
+                    paymentMethod,
+                    clientName,
+                    items,
+                    subtotal: totals.subtotal,
+                    discounts: totals.discounts,
+                    taxTotal: totals.taxTotal,
+                    totalPaid: totals.totalPaid,
+                  },
                 );
                 toast.success("Comprobante guardado y PDF descargado");
                 router.push("/comprobantes");

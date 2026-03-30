@@ -265,7 +265,7 @@ function ComprobantesContent() {
         open={viewReceipt !== null}
         onClose={() => setViewReceipt(null)}
         title={viewReceipt ? `Comprobante ${formatReceiptNumber(viewReceipt.receiptNumber)}` : ""}
-        className="sm:max-w-3xl"
+        className="sm:max-w-5xl"
         footer={
           <div className="flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setViewReceipt(null)}>
@@ -281,6 +281,20 @@ function ComprobantesContent() {
                   await exportReceiptToPdf(
                     "receipt-preview-modal",
                     `comprobante-${formatReceiptNumber(viewReceipt.receiptNumber)}`,
+                    {
+                      companyName: viewReceipt.companyName,
+                      companyAddress: viewReceipt.companyAddress,
+                      companyPhone: viewReceipt.companyPhone,
+                      receiptNumber: formatReceiptNumber(viewReceipt.receiptNumber),
+                      paymentDate: new Date(viewReceipt.paymentDate + "T12:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "numeric", year: "numeric" }),
+                      paymentMethod: viewReceipt.paymentMethod,
+                      clientName: viewReceipt.clientName,
+                      items: viewReceipt.items ?? [],
+                      subtotal: viewReceipt.subtotal,
+                      discounts: viewReceipt.discounts,
+                      taxTotal: viewReceipt.taxTotal,
+                      totalPaid: viewReceipt.totalPaid,
+                    },
                   );
                   toast.success("PDF descargado");
                 } catch {
