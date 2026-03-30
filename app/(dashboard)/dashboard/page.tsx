@@ -9,6 +9,9 @@ import {
   CheckCircle,
   ArrowUpRight,
   Plus,
+  FileText,
+  UserPlus,
+  FolderPlus,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatusBadge, PriorityBadge } from "@/components/ui/badge";
@@ -68,6 +71,58 @@ export default function DashboardPage() {
             )}
           </Card>
         ))}
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <button
+          onClick={() => setShowTicketForm(true)}
+          className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/10 transition-colors group-hover:bg-neon/20">
+            <Plus className="h-4 w-4 text-neon" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Nuevo Ticket</p>
+            <p className="text-[11px] text-white/30">Crear ticket</p>
+          </div>
+        </button>
+        <Link
+          href="/comprobantes/nuevo"
+          className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/10 transition-colors group-hover:bg-neon/20">
+            <FileText className="h-4 w-4 text-neon" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Comprobante</p>
+            <p className="text-[11px] text-white/30">Nuevo comprobante</p>
+          </div>
+        </Link>
+        <Link
+          href="/clientes"
+          className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/10 transition-colors group-hover:bg-neon/20">
+            <UserPlus className="h-4 w-4 text-neon" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Cliente</p>
+            <p className="text-[11px] text-white/30">Gestionar clientes</p>
+          </div>
+        </Link>
+        <Link
+          href="/proyectos"
+          className="flex items-center gap-3 rounded-xl border border-white/6 bg-surface p-4 text-left transition-colors hover:border-neon/20 hover:bg-neon/3 group"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/10 transition-colors group-hover:bg-neon/20">
+            <FolderPlus className="h-4 w-4 text-neon" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Proyecto</p>
+            <p className="text-[11px] text-white/30">Gestionar proyectos</p>
+          </div>
+        </Link>
       </div>
 
       {/* Bottom section */}

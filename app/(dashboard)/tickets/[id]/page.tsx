@@ -22,6 +22,10 @@ import {
   Download,
   Minus,
   RotateCcw,
+  ListTodo,
+  Circle,
+  Loader2,
+  CircleCheck,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
@@ -32,9 +36,9 @@ import { StatusBadge, PriorityBadge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TicketForm } from "@/components/forms/ticket-form";
-import { useTicket } from "@/lib/hooks";
-import { commentsService, attachmentsService, timeEntriesService, ticketsService } from "@/lib/services";
-import type { Attachment } from "@/lib/types";
+import { useTicket, useTasks } from "@/lib/hooks";
+import { commentsService, attachmentsService, timeEntriesService, ticketsService, tasksService } from "@/lib/services";
+import type { Attachment, TaskStatus } from "@/lib/types";
 import {
   statusLabels,
   priorityLabels,
@@ -209,12 +213,15 @@ export default function TicketDetailPage({
 }) {
   const { id } = use(params);
   const { ticket, isLoading: loadingTicket, mutate: mutateTicket } = useTicket(id);
+  const { data: tasks, mutate: mutateTasks } = useTasks(id);
 
   const comments = ticket?.comments;
   const attachments = ticket?.attachments;
   const totalMinutes = ticket?.totalMinutes ?? 0;
 
   const [comment, setComment] = useState("");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [addingTask, setAddingTask] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
   const [showEditTicket, setShowEditTicket] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
@@ -225,6 +232,7 @@ export default function TicketDetailPage({
   const [uploading, setUploading] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [deleteAttachmentId, setDeleteAttachmentId] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const imageAttachments = attachments?.filter((a) => a.mimeType.startsWith("image/")) ?? [];
@@ -311,6 +319,23 @@ export default function TicketDetailPage({
     }
   }
 
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file || !ticket) return;
+    setUploading(true);
+    try {
+      await attachmentsService.upload(file, ticket.id, "Admin");
+      mutateTicket();
+      toast.success("Archivo subido");
+    } catch {
+      toast.error("Error al subir archivo");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleDeleteAttachment() {
     if (!deleteAttachmentId) return;
     try {
@@ -327,6 +352,39 @@ export default function TicketDetailPage({
       toast.error("Error al eliminar archivo");
     } finally {
       setDeleteAttachmentId(null);
+    }
+  }
+
+  async function handleAddTask() {
+    if (!newTaskTitle.trim() || !ticket) return;
+    setAddingTask(true);
+    try {
+      await tasksService.create({ title: newTaskTitle.trim(), ticketId: ticket.id });
+      setNewTaskTitle("");
+      mutateTasks();
+    } catch {
+      toast.error("Error al crear tarea");
+    } finally {
+      setAddingTask(false);
+    }
+  }
+
+  async function handleToggleTask(taskId: string, currentStatus: TaskStatus) {
+    const newStatus = currentStatus === "DONE" ? "PENDING" : "DONE";
+    try {
+      await tasksService.update(taskId, { status: newStatus });
+      mutateTasks();
+    } catch {
+      toast.error("Error al actualizar tarea");
+    }
+  }
+
+  async function handleDeleteTask(taskId: string) {
+    try {
+      await tasksService.delete(taskId);
+      mutateTasks();
+    } catch {
+      toast.error("Error al eliminar tarea");
     }
   }
 
@@ -506,6 +564,87 @@ export default function TicketDetailPage({
             </div>
           </Card>
 
+          {/* Tasks (optional) */}
+          <Card>
+            <CardHeader
+              title="Tareas"
+              action={
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/10 px-2 text-xs text-white/40">
+                  {tasks ? `${tasks.filter((t) => t.status === "DONE").length}/${tasks.length}` : "0"}
+                </span>
+              }
+            />
+            <div className="flex flex-col gap-2 px-5 pb-5">
+              {tasks && tasks.length > 0 && (
+                <>
+                  {/* Progress bar */}
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="flex-1 h-1.5 rounded-full bg-white/6 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-neon transition-all duration-300"
+                        style={{ width: `${tasks.length > 0 ? (tasks.filter((t) => t.status === "DONE").length / tasks.length) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] text-white/30">
+                      {tasks.length > 0 ? Math.round((tasks.filter((t) => t.status === "DONE").length / tasks.length) * 100) : 0}%
+                    </span>
+                  </div>
+
+                  {/* Task list */}
+                  {tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-white/3 group"
+                    >
+                      <button
+                        onClick={() => handleToggleTask(task.id, task.status)}
+                        className="shrink-0 cursor-pointer"
+                      >
+                        {task.status === "DONE" ? (
+                          <CircleCheck className="h-5 w-5 text-neon" />
+                        ) : task.status === "IN_PROGRESS" ? (
+                          <Loader2 className="h-5 w-5 text-blue-400" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-white/20 hover:text-white/40 transition-colors" />
+                        )}
+                      </button>
+                      <span className={`flex-1 text-sm ${task.status === "DONE" ? "text-white/30 line-through" : "text-white/70"}`}>
+                        {task.title}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="shrink-0 rounded-md p-1 text-white/15 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Add task input */}
+              <div className="relative mt-1">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/15">
+                  <Plus className="h-4 w-4" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Agregar tarea..."
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddTask();
+                    }
+                  }}
+                  disabled={addingTask}
+                  className="h-9 w-full rounded-lg border border-dashed border-white/8 bg-transparent pl-9 pr-3 text-sm text-white placeholder:text-white/20 outline-none transition-colors focus:border-neon/30 disabled:opacity-50"
+                />
+              </div>
+            </div>
+          </Card>
+
           {/* Comments */}
           <Card>
             <CardHeader
@@ -529,7 +668,15 @@ export default function TicketDetailPage({
                         {formatRelativeTime(c.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-white/50">{c.content}</p>
+                    <p className="mt-1 text-sm text-white/50">
+                      {c.content.split(/(@\w+)/g).map((part, idx) =>
+                        part.startsWith("@") ? (
+                          <span key={idx} className="font-medium text-neon">{part}</span>
+                        ) : (
+                          <span key={idx}>{part}</span>
+                        ),
+                      )}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -540,7 +687,7 @@ export default function TicketDetailPage({
               <div className="relative mt-2">
                 <input
                   type="text"
-                  placeholder="Escribir comentario..."
+                  placeholder="Escribir comentario... (@nombre para mencionar)"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   onKeyDown={(e) => {
@@ -587,7 +734,17 @@ export default function TicketDetailPage({
               onChange={handleUpload}
               className="hidden"
             />
-            <div className="px-5 pb-5">
+            <div
+              className={`px-5 pb-5 transition-colors ${dragging ? "bg-neon/5 ring-2 ring-inset ring-neon/20 rounded-b-xl" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+            >
+              {dragging && (
+                <div className="flex items-center justify-center py-6 mb-3 rounded-lg border-2 border-dashed border-neon/30">
+                  <p className="text-sm text-neon/60">Soltar archivo aquí</p>
+                </div>
+              )}
               {imageAttachments.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   {imageAttachments.map((a, idx) => (

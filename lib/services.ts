@@ -10,6 +10,8 @@ import type {
   TicketHistory,
   Comment,
   CreateCommentPayload,
+  Task,
+  CreateTaskPayload,
   TimeEntry,
   CreateTimeEntryPayload,
   HourPack,
@@ -22,6 +24,14 @@ import type {
   CreateResponsiblePayload,
   Receipt,
   CreateReceiptPayload,
+  WikiPage,
+  WikiNode,
+  CreateWikiPagePayload,
+  VaultEntry,
+  CreateVaultEntryPayload,
+  BoardCard,
+  CreateBoardCardPayload,
+  Notification,
 } from "./types";
 
 // ── Clients ──────────────────────────────────────────
@@ -80,6 +90,19 @@ export const commentsService = {
     api<Comment>("/comments", { method: "POST", body: JSON.stringify(data) }),
   delete: (id: string) =>
     api<void>(`/comments/${id}`, { method: "DELETE" }),
+};
+
+// ── Tasks ───────────────────────────────────────────
+
+export const tasksService = {
+  getByTicket: (ticketId: string) =>
+    api<Task[]>(`/tasks/by-ticket/${ticketId}`),
+  create: (data: CreateTaskPayload) =>
+    api<Task>("/tasks", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<{ title: string; description: string; status: string }>) =>
+    api<Task>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    api<void>(`/tasks/${id}`, { method: "DELETE" }),
 };
 
 // ── Time Entries ─────────────────────────────────────
@@ -159,6 +182,61 @@ export const receiptsService = {
     api<Receipt>("/receipts", { method: "POST", body: JSON.stringify(data) }),
   update: (id: string, data: Partial<CreateReceiptPayload>) =>
     api<Receipt>(`/receipts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  void: (id: string) =>
+    api<Receipt>(`/receipts/${id}/void`, { method: "PATCH" }),
   delete: (id: string) =>
     api<void>(`/receipts/${id}`, { method: "DELETE" }),
+};
+
+// ── Wiki ──────────────────────────────────────────
+
+export const wikiService = {
+  list: (params?: { page?: number; limit?: number }) =>
+    api<WikiPage[]>(`/wiki${buildQuery(params ?? {})}`),
+  nodes: () => api<WikiNode[]>("/wiki/nodes"),
+  get: (id: string) => api<WikiPage>(`/wiki/${id}`),
+  create: (data: CreateWikiPagePayload) =>
+    api<WikiPage>("/wiki", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateWikiPagePayload>) =>
+    api<WikiPage>(`/wiki/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    api<void>(`/wiki/${id}`, { method: "DELETE" }),
+};
+
+// ── Vault ─────────────────────────────────────────
+
+export const vaultService = {
+  list: () => api<VaultEntry[]>("/vault"),
+  getByClient: (clientId: string) => api<VaultEntry[]>(`/vault/by-client/${clientId}`),
+  getByProject: (projectId: string) => api<VaultEntry[]>(`/vault/by-project/${projectId}`),
+  create: (data: CreateVaultEntryPayload) =>
+    api<VaultEntry>("/vault", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateVaultEntryPayload>) =>
+    api<VaultEntry>(`/vault/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    api<void>(`/vault/${id}`, { method: "DELETE" }),
+};
+
+// ── Board Cards ───────────────────────────────────
+
+export const boardCardsService = {
+  getByResponsible: (responsibleId: string) =>
+    api<BoardCard[]>(`/board-cards/by-responsible/${responsibleId}`),
+  create: (data: CreateBoardCardPayload) =>
+    api<BoardCard>("/board-cards", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: string, data: Record<string, unknown>) =>
+    api<BoardCard>(`/board-cards/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    api<void>(`/board-cards/${id}`, { method: "DELETE" }),
+};
+
+// ── Notifications ─────────────────────────────────
+
+export const notificationsService = {
+  list: (limit = 20) =>
+    api<{ data: Notification[]; unreadCount: number }>(`/notifications?limit=${limit}`),
+  markAsRead: (id: string) =>
+    api<void>(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllAsRead: () =>
+    api<void>("/notifications/read-all", { method: "PATCH" }),
 };

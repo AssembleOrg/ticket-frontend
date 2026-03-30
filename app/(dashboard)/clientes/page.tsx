@@ -26,6 +26,7 @@ export default function ClientesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<Client | undefined>();
   const [view, setView] = useState<ViewMode>("grid");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const effectiveView: ViewMode = isDesktop ? "list" : view;
 
   const { data: clients, pagination, isLoading, mutate } = useClients({ page, limit });
@@ -39,12 +40,16 @@ export default function ClientesPage() {
   );
 
   async function handleDelete(id: string) {
+    if (deletingId) return;
+    setDeletingId(id);
     try {
       await clientsService.delete(id);
       toast.success("Cliente eliminado");
       mutate();
     } catch {
       toast.error("Error al eliminar cliente");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -149,7 +154,8 @@ export default function ClientesPage() {
                     </button>
                     <button
                       onClick={() => handleDelete(c.id)}
-                      className="rounded-lg p-2 text-white/30 transition-colors hover:bg-white/10 hover:text-red-400"
+                      disabled={deletingId === c.id}
+                      className="rounded-lg p-2 text-white/30 transition-colors hover:bg-white/10 hover:text-red-400 disabled:opacity-30 disabled:pointer-events-none"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

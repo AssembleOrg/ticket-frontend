@@ -1,8 +1,12 @@
 // ── Auth ──────────────────────────────────────────────
 
+export type UserRole = "ADMIN" | "RESPONSIBLE";
+
 export interface AuthUser {
   id: string;
   email: string;
+  name?: string;
+  role?: UserRole;
 }
 
 export interface LoginResponse {
@@ -136,6 +140,28 @@ export interface CreateCommentPayload {
   ticketId: string;
 }
 
+// ── Tasks ───────────────────────────────────────────
+
+export type TaskStatus = "PENDING" | "IN_PROGRESS" | "DONE";
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  estimatedMinutes: number | null;
+  ticketId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTaskPayload {
+  title: string;
+  description?: string;
+  estimatedMinutes?: number;
+  ticketId: string;
+}
+
 // ── Time Entries ─────────────────────────────────────
 
 export interface TimeEntry {
@@ -241,6 +267,8 @@ export interface CreateResponsiblePayload {
 
 // ── Receipts ───────────────────────────────────────
 
+export type ReceiptStatus = "ACTIVE" | "VOIDED";
+
 export interface ReceiptItem {
   quantity: number;
   code: string;
@@ -253,6 +281,7 @@ export interface ReceiptItem {
 export interface Receipt {
   id: string;
   receiptNumber: number;
+  status: ReceiptStatus;
   companyName: string;
   companyAddress: string;
   companyPhone: string;
@@ -277,4 +306,98 @@ export interface CreateReceiptPayload {
   paymentMethod: string;
   clientName: string;
   items: ReceiptItem[];
+}
+
+// ── Wiki ──────────────────────────────────────────
+
+export interface WikiPage {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WikiNode {
+  id: string;
+  title: string;
+  tags: string[];
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWikiPagePayload {
+  title: string;
+  content?: string;
+  tags?: string[];
+}
+
+// ── Vault ─────────────────────────────────────────
+
+export interface VaultEntry {
+  id: string;
+  label: string;
+  username: string | null;
+  password: string;
+  url: string | null;
+  notes: string | null;
+  clientId: string | null;
+  projectId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateVaultEntryPayload {
+  label: string;
+  username?: string;
+  password: string;
+  url?: string;
+  notes?: string;
+  clientId?: string;
+  projectId?: string;
+}
+
+// ── Board Cards ───────────────────────────────────
+
+export type BoardColumn = "TODO" | "IN_PROGRESS" | "DONE";
+
+export interface BoardCard {
+  id: string;
+  title: string;
+  description: string | null;
+  column: BoardColumn;
+  color: string | null;
+  dueDate: string | null;
+  position: number;
+  responsibleId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBoardCardPayload {
+  title: string;
+  description?: string;
+  column?: BoardColumn;
+  color?: string;
+  dueDate?: string;
+  position?: number;
+  responsibleId: string;
+}
+
+// ── Notifications ─────────────────────────────────
+
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  resourceId: string | null;
+  resourceType: string | null;
+  read: boolean;
+  createdAt: string;
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { SWRProvider } from "@/components/swr-provider";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,6 +18,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TicketOps — Centro de Operaciones",
   description: "Sistema de gestión de tickets de soporte técnico",
+  manifest: "/manifest.json",
+  themeColor: "#b4f636",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TicketOps",
+  },
 };
 
 export default function RootLayout({
@@ -33,6 +41,7 @@ export default function RootLayout({
           {children}
         </SWRProvider>
         <ToastProvider />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

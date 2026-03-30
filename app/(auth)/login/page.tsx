@@ -55,7 +55,7 @@ export default function LoginPage() {
             Iniciar sesión
           </h2>
           <p className="mt-2 text-sm text-white/50">
-            Ingresá tus credenciales para acceder al panel de soporte técnico
+            Accedé con tu cuenta de Google autorizada
           </p>
         </div>
 

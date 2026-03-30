@@ -7,6 +7,7 @@ import type {
   Project,
   Ticket,
   TicketFilters,
+  Task,
   Comment,
   Attachment,
   HourPack,
@@ -14,6 +15,7 @@ import type {
   HourPackAudit,
   Responsible,
   Receipt,
+  WikiPage,
 } from "./types";
 import { buildQuery } from "./api";
 
@@ -98,6 +100,14 @@ export function useProjects(params?: { page?: number; limit?: number }) {
   return usePaginated<Project>(`/projects${buildQuery(params ?? {})}`);
 }
 
+export function useProject(id: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse<Project>>(
+    id ? `/projects/${id}` : null,
+    fetcher<Project>,
+  );
+  return { project: data?.data, isLoading, error, mutate };
+}
+
 export function useProjectsByClient(clientId: string | undefined) {
   return usePaginated<Project>(
     clientId ? `/projects/by-client/${clientId}` : null,
@@ -125,6 +135,14 @@ export function useTicket(id: string | undefined) {
 export function useComments(ticketId: string | undefined) {
   return usePaginated<Comment>(
     ticketId ? `/comments/by-ticket/${ticketId}` : null,
+  );
+}
+
+// ── Tasks ───────────────────────────────────────────
+
+export function useTasks(ticketId: string | undefined) {
+  return usePaginated<Task>(
+    ticketId ? `/tasks/by-ticket/${ticketId}?limit=100` : null,
   );
 }
 
@@ -178,4 +196,18 @@ export function useReceipt(id: string | undefined) {
     fetcher<Receipt>,
   );
   return { receipt: data?.data, isLoading, error, mutate };
+}
+
+// ── Wiki ──────────────────────────────────────────
+
+export function useWikiPages(params?: { page?: number; limit?: number }) {
+  return usePaginated<WikiPage>(`/wiki${buildQuery(params ?? {})}`);
+}
+
+export function useWikiPage(id: string | undefined) {
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse<WikiPage>>(
+    id ? `/wiki/${id}` : null,
+    fetcher<WikiPage>,
+  );
+  return { page: data?.data, isLoading, error, mutate };
 }

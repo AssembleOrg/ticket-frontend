@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Save, RotateCcw, Download } from "lucide-react";
+import { Plus, Trash2, Save, RotateCcw, Building2, Banknote, Package, GripVertical, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ClientCombobox } from "@/components/ui/client-combobox";
 import { ReceiptPreview } from "@/components/receipt-preview";
 import { receiptsService } from "@/lib/services";
+import { exportReceiptToPdf } from "@/lib/export-pdf";
 import type { Receipt, ReceiptItem, CreateReceiptPayload } from "@/lib/types";
 
 interface ReceiptEditorProps {
@@ -17,7 +19,7 @@ interface ReceiptEditorProps {
 const emptyItem: ReceiptItem = {
   quantity: 1,
   code: "",
-  description: "",
+  description: "Pago por servidores, base de datos, soporte y mantenimiento",
   unitPrice: 0,
   taxPercent: 0,
   discountPercent: 0,
@@ -55,10 +57,15 @@ function calculateTotals(items: ReceiptItem[]) {
   };
 }
 
+const inputClass =
+  "h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none transition-colors focus:border-neon/30 focus:bg-white/6";
+const labelClass = "text-[11px] font-medium uppercase tracking-wider text-white/40";
+
 export function ReceiptEditor({ receipt, nextNumber }: ReceiptEditorProps) {
   const router = useRouter();
   const isEditing = !!receipt;
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [companyName, setCompanyName] = useState(receipt?.companyName ?? defaultCompany.companyName);
   const [companyAddress, setCompanyAddress] = useState(receipt?.companyAddress ?? defaultCompany.companyAddress);
@@ -150,224 +157,280 @@ export function ReceiptEditor({ receipt, nextNumber }: ReceiptEditorProps) {
     : "";
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-start">
+    <div className="grid grid-cols-1 xl:grid-cols-[440px_1fr] gap-6 items-start">
       {/* Left panel - Config */}
-      <div className="rounded-xl border border-white/8 bg-surface p-6 flex flex-col gap-6">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <span className="text-lg">&#9881;</span> Configuración
-        </h2>
+      <div className="flex flex-col gap-4">
+        {/* Sticky actions */}
+        <div className="rounded-xl border border-white/8 bg-surface p-4 flex items-center gap-2">
+          <Button onClick={handleSave} disabled={saving} className="flex-1">
+            <Save className="h-4 w-4" />
+            {saving ? "Guardando..." : isEditing ? "Guardar Cambios" : "Guardar Comprobante"}
+          </Button>
+          <Button
+            variant="secondary"
+            loading={exporting}
+            size="md"
+            onClick={async () => {
+              if (!clientName.trim()) {
+                toast.error("Ingrese el nombre del cliente");
+                return;
+              }
+              if (items.length === 0) {
+                toast.error("Agregue al menos un item");
+                return;
+              }
 
-        {/* Company info */}
-        <section>
-          <h3 className="text-sm font-semibold text-neon mb-3 flex items-center gap-2">
-            <span>&#127970;</span> Información de la Empresa
-          </h3>
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Nombre de la Empresa</span>
-              <input
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Dirección</span>
-              <input
-                type="text"
-                value={companyAddress}
-                onChange={(e) => setCompanyAddress(e.target.value)}
-                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Teléfono</span>
-              <input
-                type="text"
-                value={companyPhone}
-                onChange={(e) => setCompanyPhone(e.target.value)}
-                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-              />
-            </label>
-          </div>
-        </section>
+              setExporting(true);
+              try {
+                // Save first
+                const payload: CreateReceiptPayload = {
+                  companyName,
+                  companyAddress,
+                  companyPhone,
+                  paymentDate,
+                  paymentMethod,
+                  clientName,
+                  items,
+                };
 
-        {/* Payment info */}
-        <section>
-          <h3 className="text-sm font-semibold text-neon mb-3 flex items-center gap-2">
-            <span>&#128179;</span> Información del Pago
-          </h3>
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Número de Comprobante</span>
-              <input
-                type="text"
-                value={formatReceiptNumber(receiptNumber)}
-                readOnly
-                className="h-10 rounded-lg border border-white/8 bg-white/3 px-3 text-sm text-white/50 outline-none cursor-not-allowed"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Fecha de Pago</span>
-              <input
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20 [color-scheme:dark]"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Método de Pago</span>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20 [color-scheme:dark]"
-              >
-                <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                <option value="Tarjeta de Débito">Tarjeta de Débito</option>
-                <option value="MercadoPago">MercadoPago</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Cliente</span>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Nombre del cliente"
-                className="h-10 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white placeholder:text-white/25 outline-none focus:border-white/20"
-              />
-            </label>
-          </div>
-        </section>
+                if (isEditing) {
+                  await receiptsService.update(receipt.id, payload);
+                } else {
+                  await receiptsService.create(payload);
+                }
 
-        {/* Items */}
-        <section>
-          <h3 className="text-sm font-semibold text-neon mb-3 flex items-center gap-2">
-            <span>&#128230;</span> Productos/Servicios
-          </h3>
-          <div className="flex flex-col gap-4">
-            {items.map((item, i) => (
-              <div key={i} className="rounded-lg border border-white/6 bg-white/2 p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-white/50">Item {i + 1}</span>
-                  {items.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(i)}
-                      className="rounded-md px-2.5 py-1 text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
-                    >
-                      Eliminar
-                    </button>
-                  ) : null}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Cantidad</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) => updateItem(i, "quantity", parseInt(e.target.value) || 0)}
-                      className="h-9 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Código</span>
-                    <input
-                      type="text"
-                      value={item.code}
-                      onChange={(e) => updateItem(i, "code", e.target.value)}
-                      className="h-9 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-                    />
-                  </label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Descripción</span>
-                    <textarea
-                      rows={3}
-                      value={item.description}
-                      onChange={(e) => updateItem(i, "description", e.target.value)}
-                      className="rounded-lg border border-white/8 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-white/20 resize-y"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Precio Unitario</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(i, "unitPrice", parseFloat(e.target.value) || 0)}
-                      className="h-9 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-                    />
-                  </label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">IVA %</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={item.taxPercent}
-                      onChange={(e) => updateItem(i, "taxPercent", parseFloat(e.target.value) || 0)}
-                      className="h-9 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Descuento %</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={item.discountPercent}
-                      onChange={(e) => updateItem(i, "discountPercent", parseFloat(e.target.value) || 0)}
-                      className="h-9 rounded-lg border border-white/8 bg-white/5 px-3 text-sm text-white outline-none focus:border-white/20"
-                    />
-                  </label>
-                </div>
+                // Then export PDF
+                await exportReceiptToPdf(
+                  "receipt-preview-editor",
+                  `comprobante-${formatReceiptNumber(receiptNumber)}`,
+                );
+                toast.success("Comprobante guardado y PDF descargado");
+                router.push("/comprobantes");
+              } catch {
+                toast.error("Error al guardar o generar PDF");
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button variant="secondary" onClick={handleReset} size="md">
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="rounded-xl border border-white/8 bg-surface p-6 flex flex-col gap-6">
+          {/* Payment info - most important, goes first */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neon/10">
+                <Banknote className="h-3.5 w-3.5 text-neon" />
               </div>
-            ))}
+              <h3 className="text-sm font-semibold text-white">Información del Pago</h3>
+            </div>
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1">
+                <span className={labelClass}>Número de Comprobante</span>
+                <input
+                  type="text"
+                  value={formatReceiptNumber(receiptNumber)}
+                  readOnly
+                  className="h-10 rounded-lg border border-white/8 bg-white/3 px-3 text-sm font-mono text-neon/60 outline-none cursor-not-allowed"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex flex-col gap-1">
+                  <span className={labelClass}>Fecha de Pago</span>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className={`${inputClass} [color-scheme:dark]`}
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className={labelClass}>Método de Pago</span>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className={`${inputClass} [color-scheme:dark]`}
+                  >
+                    {["Transferencia Bancaria", "Efectivo", "Tarjeta de Crédito", "Tarjeta de Débito", "MercadoPago", "Otro"].map((m) => (
+                      <option key={m} value={m} className="bg-[#111117] text-white">{m}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className={labelClass}>Cliente</span>
+                <ClientCombobox value={clientName} onChange={setClientName} />
+              </div>
+            </div>
+          </section>
 
-            <Button variant="secondary" onClick={addItem} className="w-full">
-              <Plus className="h-4 w-4" />
-              Agregar Item
-            </Button>
-          </div>
-        </section>
+          <div className="h-px bg-white/6" />
 
-        {/* Actions */}
-        <section>
-          <h3 className="text-sm font-semibold text-neon mb-3 flex items-center gap-2">
-            <span>&#127919;</span> Acciones
-          </h3>
-          <div className="flex flex-col gap-2">
-            <Button onClick={handleSave} disabled={saving} className="w-full">
-              <Save className="h-4 w-4" />
-              {saving ? "Guardando..." : isEditing ? "Guardar Cambios" : "Guardar Comprobante"}
-            </Button>
-            <Button variant="secondary" onClick={handleReset} className="w-full">
-              <RotateCcw className="h-4 w-4" />
-              Restablecer
-            </Button>
-          </div>
-        </section>
+          {/* Items */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neon/10">
+                <Package className="h-3.5 w-3.5 text-neon" />
+              </div>
+              <h3 className="text-sm font-semibold text-white">Productos / Servicios</h3>
+              <span className="ml-auto text-xs text-white/25">{items.length} {items.length === 1 ? "item" : "items"}</span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {items.map((item, i) => (
+                <div key={i} className="rounded-lg border border-white/6 bg-white/2 p-4 flex flex-col gap-3 group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="h-3.5 w-3.5 text-white/15" />
+                      <span className="text-xs font-medium text-white/40">Item {i + 1}</span>
+                    </div>
+                    {items.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(i)}
+                        className="rounded-md p-1.5 text-white/20 transition-colors hover:bg-red-500/10 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-[60px_1fr] gap-3">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Cant.</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => updateItem(i, "quantity", parseInt(e.target.value) || 0)}
+                        className="h-9 rounded-lg border border-white/8 bg-white/5 px-2 text-sm text-center text-white outline-none focus:border-neon/30"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Descripción</span>
+                      <textarea
+                        rows={2}
+                        value={item.description}
+                        onChange={(e) => updateItem(i, "description", e.target.value)}
+                        placeholder="Descripción del servicio o producto"
+                        className="rounded-lg border border-white/8 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/15 outline-none focus:border-neon/30 resize-y"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Código</span>
+                      <input
+                        type="text"
+                        value={item.code}
+                        onChange={(e) => updateItem(i, "code", e.target.value)}
+                        placeholder="—"
+                        className="h-9 rounded-lg border border-white/8 bg-white/5 px-2 text-sm text-center font-mono text-white placeholder:text-white/15 outline-none focus:border-neon/30"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Precio Unit.</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.unitPrice}
+                        onChange={(e) => updateItem(i, "unitPrice", parseFloat(e.target.value) || 0)}
+                        className="h-9 rounded-lg border border-white/8 bg-white/5 px-2 text-sm text-center text-white outline-none focus:border-neon/30"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">IVA %</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={item.taxPercent}
+                        onChange={(e) => updateItem(i, "taxPercent", parseFloat(e.target.value) || 0)}
+                        className="h-9 rounded-lg border border-white/8 bg-white/5 px-2 text-sm text-center text-white outline-none focus:border-neon/30"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">Dto. %</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={item.discountPercent}
+                        onChange={(e) => updateItem(i, "discountPercent", parseFloat(e.target.value) || 0)}
+                        className="h-9 rounded-lg border border-white/8 bg-white/5 px-2 text-sm text-center text-white outline-none focus:border-neon/30"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addItem}
+                className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-white/10 py-3 text-sm text-white/40 transition-colors hover:border-neon/30 hover:text-neon/70 hover:bg-neon/3"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar item
+              </button>
+            </div>
+          </section>
+
+          <div className="h-px bg-white/6" />
+
+          {/* Company info - collapsible, less important */}
+          <details className="group">
+            <summary className="flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5">
+                <Building2 className="h-3.5 w-3.5 text-white/40" />
+              </div>
+              <h3 className="text-sm font-semibold text-white/50">Datos de la Empresa</h3>
+              <span className="ml-auto text-[10px] text-white/20 group-open:hidden">Expandir</span>
+              <span className="ml-auto text-[10px] text-white/20 hidden group-open:inline">Contraer</span>
+            </summary>
+            <div className="flex flex-col gap-3 mt-4">
+              <label className="flex flex-col gap-1">
+                <span className={labelClass}>Nombre de la Empresa</span>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={labelClass}>Dirección</span>
+                <input
+                  type="text"
+                  value={companyAddress}
+                  onChange={(e) => setCompanyAddress(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={labelClass}>Teléfono</span>
+                <input
+                  type="text"
+                  value={companyPhone}
+                  onChange={(e) => setCompanyPhone(e.target.value)}
+                  className={inputClass}
+                />
+              </label>
+            </div>
+          </details>
+        </div>
       </div>
 
       {/* Right panel - Preview */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <span className="text-lg">&#128065;</span> Vista Previa
-          </h2>
-          <span className="text-xs text-white/30">Los cambios se actualizan en tiempo real</span>
+      <div className="flex flex-col gap-3 xl:sticky xl:top-6">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm font-medium text-white/40">Vista Previa</h2>
+          <span className="text-[11px] text-white/20">Actualización en tiempo real</span>
         </div>
         <ReceiptPreview
+          id="receipt-preview-editor"
           companyName={companyName}
           companyAddress={companyAddress}
           companyPhone={companyPhone}

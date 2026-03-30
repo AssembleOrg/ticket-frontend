@@ -1,0 +1,22 @@
+{
+  "name": "TicketOps - Centro de Operaciones",
+  "short_name": "TicketOps",
+  "description": "Sistema de gestión de tickets, clientes y soporte técnico",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#b4f636",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Eye, Pencil, CheckCircle, RotateCcw, Minus } from "lucide-react";
+import { Plus, Eye, Pencil, CheckCircle, RotateCcw, Minus, Download } from "lucide-react";
+import { exportToCsv } from "@/lib/export-csv";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/ui/search-bar";
@@ -131,10 +132,33 @@ export default function TicketsPage() {
         title="Tickets"
         subtitle={pagination ? `${pagination.total} tickets` : undefined}
         action={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4" />
-            Nuevo ticket
-          </Button>
+          <div className="flex items-center gap-2">
+            {filtered && filtered.length > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  exportToCsv(
+                    "tickets",
+                    ["Código", "Título", "Estado", "Prioridad", "Cliente", "Proyecto", "Responsable", "Fecha"],
+                    filtered.map((t) => [
+                      t.code, t.title, t.status, t.priority,
+                      t.client?.name ?? "", t.project?.name ?? "",
+                      t.responsible?.name ?? "", t.createdAt,
+                    ]),
+                  );
+                  toast.success("CSV exportado");
+                }}
+              >
+                <Download className="h-4 w-4" />
+                CSV
+              </Button>
+            )}
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" />
+              Nuevo ticket
+            </Button>
+          </div>
         }
       />
 
