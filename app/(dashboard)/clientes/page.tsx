@@ -12,6 +12,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useClients } from "@/lib/hooks";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { clientsService } from "@/lib/services";
@@ -25,6 +26,7 @@ export default function ClientesPage() {
   const [limit, setLimit] = useState(10);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<Client | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("grid");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const effectiveView: ViewMode = isDesktop ? "list" : view;
@@ -43,7 +45,7 @@ export default function ClientesPage() {
     if (deletingId) return;
     setDeletingId(id);
     try {
-      await clientsService.delete(id);
+      await clientsService.delete(deleteTarget);
       toast.success("Cliente eliminado");
       mutate();
     } catch {
@@ -79,6 +81,16 @@ export default function ClientesPage() {
             Nuevo cliente
           </Button>
         }
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Eliminar cliente"
+        description="¿Estás seguro de que querés eliminar este cliente? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        variant="danger"
       />
 
       <ClientForm
@@ -218,7 +230,7 @@ export default function ClientesPage() {
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(c.id)}
+                              onClick={() => setDeleteTarget(c.id)}
                               className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/10 hover:text-red-400"
                             >
                               <Trash2 className="h-4 w-4" />
