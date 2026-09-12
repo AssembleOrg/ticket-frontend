@@ -8,7 +8,6 @@ import { exportReceiptToPdf } from "@/lib/export-pdf";
 import { exportToCsv } from "@/lib/export-csv";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SearchBar } from "@/components/ui/search-bar";
 import { Pagination } from "@/components/ui/pagination";
 import { PageHeader } from "@/components/ui/page-header";

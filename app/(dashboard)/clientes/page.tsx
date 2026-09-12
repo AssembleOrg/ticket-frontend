@@ -41,13 +41,15 @@ export default function ClientesPage() {
       c.company.toLowerCase().includes(search.toLowerCase()),
   );
 
-  async function handleDelete(id: string) {
-    if (deletingId) return;
+  async function handleDelete() {
+    if (!deleteTarget || deletingId) return;
+    const id = deleteTarget;
     setDeletingId(id);
     try {
-      await clientsService.delete(deleteTarget);
+      await clientsService.delete(id);
       toast.success("Cliente eliminado");
       mutate();
+      setDeleteTarget(null);
     } catch {
       toast.error("Error al eliminar cliente");
     } finally {
@@ -165,7 +167,7 @@ export default function ClientesPage() {
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(c.id)}
+                      onClick={() => setDeleteTarget(c.id)}
                       disabled={deletingId === c.id}
                       className="rounded-lg p-2 text-white/30 transition-colors hover:bg-white/10 hover:text-red-400 disabled:opacity-30 disabled:pointer-events-none"
                     >
